@@ -149,7 +149,7 @@ func parsePropertyFile(k string, b string, svc *s3.S3) {
 			case "object":
 				// TODO: Decrypt secret here.
 				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
-				secret.Decrypt2(value)
+				secret.Decrypt(value)
 			default:
 				log.Errorf("Service: %v | Key: %v | Value %v | Type: %v | Unsupported! %v:%T", k, string(key), string(value), dataTypeString, dataTypeString, dataTypeString)
 			}

@@ -143,21 +143,6 @@
   version = "v1.0.3"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/spacemonkeygo/openssl"
-  packages = [
-    ".",
-    "utils"
-  ]
-  revision = "85c7f475b6f75ff4afea3bb003f8b5ca711f8945"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/spacemonkeygo/spacelog"
-  packages = ["."]
-  revision = "2296661a0572a51438413369004fa931c2641923"
-
-[[projects]]
   name = "github.com/spf13/afero"
   packages = [
     ".",
@@ -227,6 +212,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f6036e31ad2e49bf880e9fbfa7f8673af0fa47ee93e67c5979f1c06db4a32f97"
+  inputs-digest = "1d80b278988436bda004e83a188f55ce519d42a075d27fbdf8fc442d347c007d"
   solver-name = "gps-cdcl"
   solver-version = 1
