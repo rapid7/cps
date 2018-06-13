@@ -92,9 +92,9 @@ func decryptCBC(key, ciphertext []byte) (plaintext []byte, err error) {
 	}
 
 	iv := make([]byte, 16)
-	deciphered := make([]byte, 16)
+	decrypted := make([]byte, len(ciphertext))
 	cbc := cipher.NewCBCDecrypter(block, iv)
-	cbc.CryptBlocks(deciphered, ciphertext)
+	cbc.CryptBlocks(decrypted, ciphertext)
 
-	return deciphered, nil
+	return decrypted, nil
 }
