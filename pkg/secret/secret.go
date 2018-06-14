@@ -70,7 +70,7 @@ func Decrypt(s []byte) (string, error) {
 		log.Errorf("Error decrypting ciphertext: %v", err)
 	}
 
-	log.Printf("The secret: %s", pt)
+	// log.Printf("The secret: %s", pt)
 
 	return string(pt[:]), nil
 }
