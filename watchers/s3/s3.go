@@ -50,7 +50,20 @@ func Poll(bucket, bucketRegion string) {
 	}
 
 	Sync(time.Now())
-	doEvery(60*time.Second, Sync)
+
+	ticker := time.NewTicker(60 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				Sync(time.Now())
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }
 
 func Sync(t time.Time) {
@@ -96,6 +109,8 @@ func Sync(t time.Time) {
 
 	Up = true
 	Health = true
+
+	log.Print("S3 sync finished")
 }
 
 func parsePropertyFile(k string, b string, svc *s3.S3) {
@@ -161,11 +176,5 @@ func parsePropertyFile(k string, b string, svc *s3.S3) {
 
 	} else {
 		log.Printf("Skipping: %v.\n", k)
-	}
-}
-
-func doEvery(d time.Duration, f func(time.Time)) {
-	for x := range time.Tick(d) {
-		f(x)
 	}
 }

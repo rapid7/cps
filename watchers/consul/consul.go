@@ -39,7 +39,20 @@ func Poll(host string) {
 	}
 
 	Sync(time.Now())
-	doEvery(60*time.Second, Sync)
+
+	ticker := time.NewTicker(60 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				Sync(time.Now())
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }
 
 func Sync(t time.Time) {
@@ -70,11 +83,13 @@ func Sync(t time.Time) {
 
 	healthyNodes = make(map[string][]string)
 
+	var mutex = &sync.Mutex{}
+
 	for key, _ := range services {
 		guard <- struct{}{}
 		go func(key string) {
 			defer wg.Done()
-			getServiceHealth(key, client, qo)
+			getServiceHealth(key, client, qo, mutex)
 			<-guard
 		}(key)
 	}
@@ -86,9 +101,11 @@ func Sync(t time.Time) {
 
 	Health = true
 	Up = true
+
+	log.Print("Consul sync is finished")
 }
 
-func getServiceHealth(key string, client *api.Client, qo api.QueryOptions) {
+func getServiceHealth(key string, client *api.Client, qo api.QueryOptions, m *sync.Mutex) {
 	h := client.Health()
 	sh, _, err := h.Service(key, "", true, &qo)
 	if err != nil {
@@ -100,15 +117,11 @@ func getServiceHealth(key string, client *api.Client, qo api.QueryOptions) {
 		ip := element.Node.Address
 		// log.Printf("Service health for %v is %v on %v", key, as, ip)
 		if as == "passing" {
+			m.Lock()
 			healthyNodes[key] = append(healthyNodes[key], ip)
+			m.Unlock()
 		} else {
 			log.Printf("Service %v is %v skipping!", key, as)
 		}
-	}
-}
-
-func doEvery(d time.Duration, f func(time.Time)) {
-	for x := range time.Tick(d) {
-		f(x)
 	}
 }
