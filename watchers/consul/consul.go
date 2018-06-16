@@ -66,6 +66,7 @@ func Sync(t time.Time) {
 	client, err := api.NewClient(consulConfig)
 	if err != nil {
 		log.Errorf("Consul error: %v\n", err)
+		return
 	}
 
 	catalog := client.Catalog()
@@ -73,6 +74,7 @@ func Sync(t time.Time) {
 	services, _, err := catalog.Services(&qo)
 	if err != nil {
 		log.Errorf("Catalog/services error: %v", err)
+		return
 	}
 
 	var wg sync.WaitGroup
@@ -110,6 +112,7 @@ func getServiceHealth(key string, client *api.Client, qo api.QueryOptions, m *sy
 	sh, _, err := h.Service(key, "", true, &qo)
 	if err != nil {
 		log.Errorf("Failed to find service: %v", err)
+		return
 	}
 
 	for _, element := range sh {
