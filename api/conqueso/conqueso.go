@@ -56,6 +56,8 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 			line = k + "=" + strconv.Itoa(v.(int)) + "\n"
 		case bool:
 			line = k + "=" + strconv.FormatBool(v.(bool)) + "\n"
+		case float64:
+			line = k + "=" + strconv.FormatFloat(v.(float64), 'f', -1, 64) + "\n"
 		default:
 			log.Fatalf("Could not parse %v:%v, v is of type %T", k, v, t)
 		}

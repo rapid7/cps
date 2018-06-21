@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -152,7 +153,12 @@ func parsePropertyFile(k string, b string, svc *s3.S3) {
 				properties[string(key)] = string(value)
 			case "number":
 				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
-				v, _ := strconv.Atoi(string(value))
+				var v interface{}
+				if strings.Contains(string(value), ".") {
+					v, _ = strconv.ParseFloat(string(value), 64)
+				} else {
+					v, _ = strconv.Atoi(string(value))
+				}
 				properties[string(key)] = v
 			case "boolean":
 				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
