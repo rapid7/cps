@@ -1,6 +1,6 @@
 # CPS - Centralized Property Service
 
-CPS is a centralized dynamic property service. It serves up the precomputed properties for a service as well as dynamic consul properties in the form of `conqueso.service.ips=`.
+CPS is a centralized dynamic property service. It serves up the precomputed properties for a service as well as dynamic consul properties in the form of `conqueso.service.ips=`.It also supports AWS SSM Parameter Store SecureStrings.
 
 ## configuration
 
