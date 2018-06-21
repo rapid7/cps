@@ -48,7 +48,6 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 
 	for k, v := range serviceProperties {
 		var line string
-		// TODO: cover all type cases.
 		switch t := v.(type) {
 		case string:
 			line = k + "=" + v.(string) + "\n"
@@ -59,7 +58,7 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 		case float64:
 			line = k + "=" + strconv.FormatFloat(v.(float64), 'f', -1, 64) + "\n"
 		default:
-			log.Fatalf("Could not parse %v:%v, v is of type %T", k, v, t)
+			log.Errorf("Could not parse %v:%v, v is of type %T", k, v, t)
 		}
 		output.WriteString(line)
 	}
