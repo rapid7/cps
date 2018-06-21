@@ -10,6 +10,7 @@ import (
 	cq "cps/api/conqueso"
 	health "cps/api/health"
 	props "cps/api/properties"
+	kv "cps/pkg/kv"
 	consul "cps/watchers/consul"
 	s3 "cps/watchers/s3"
 
@@ -53,8 +54,16 @@ func main() {
 	viper.SetDefault("consul.host", "localhost:8500")
 	consulHost := viper.GetString("consul.host")
 
+	viper.SetDefault("consul.enabled", true)
+	consulEnabled := viper.GetBool("consul.enabled")
+
 	go s3.Poll(bucket, bucketRegion)
-	go consul.Poll(consulHost)
+
+	if consulEnabled {
+		go consul.Poll(consulHost)
+	} else {
+		kv.WriteProperty("consul", make(map[string][]string))
+	}
 
 	router := mux.NewRouter()
 
