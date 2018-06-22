@@ -115,6 +115,10 @@ func getServiceHealth(key string, client *api.Client, qo api.QueryOptions, m *sy
 		return
 	}
 
+	var emptyIp []string
+	m.Lock()
+	healthyNodes[key] = emptyIp
+	m.Unlock()
 	for _, element := range sh {
 		as := element.Checks.AggregatedStatus()
 		ip := element.Node.Address
