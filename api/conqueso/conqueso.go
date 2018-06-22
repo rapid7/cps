@@ -31,7 +31,6 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 	serviceProperties := kv.GetProperty(path.String()).(map[string]interface{})
 
 	var output bytes.Buffer
-	// TODO: Verify a service with no healthy nodes returns empty value.
 	consulProperties := kv.GetProperty("consul").(map[string][]string)
 	for k, v := range consulProperties {
 		key := "conqueso." + k + ".ips="
