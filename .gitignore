@@ -1,5 +1,11 @@
+# Directories
 vendor/
+local-files/
+
+# Artifacts
 cps
 cps_linux_amd64
+
+# Configs
 cps.json
 cps.yml
