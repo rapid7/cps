@@ -12,6 +12,7 @@ import (
 	props "cps/api/properties"
 	kv "cps/pkg/kv"
 	consul "cps/watchers/consul"
+	file "cps/watchers/file"
 	s3 "cps/watchers/s3"
 
 	log "github.com/sirupsen/logrus"
@@ -35,6 +36,10 @@ func main() {
 		log.Fatalf("Fatal error reading in config file: %s", err)
 	}
 
+	viper.SetDefault("file.enabled", false)
+	fileEnabled := viper.GetBool("file.enabled")
+	directory := viper.GetString("file.directory")
+
 	account := viper.GetString("account")
 	if account == "" {
 		log.Fatalf("Config `account` is required!")
@@ -44,7 +49,7 @@ func main() {
 		log.Fatalf("Config `region` is required!")
 	}
 	bucket := viper.GetString("s3.bucket")
-	if bucket == "" {
+	if bucket == "" && !fileEnabled {
 		log.Fatalf("Config `s3.bucket` is required!")
 	}
 
@@ -54,10 +59,22 @@ func main() {
 	viper.SetDefault("consul.host", "localhost:8500")
 	consulHost := viper.GetString("consul.host")
 
+	viper.SetDefault("s3.enabled", true)
+	s3Enabled := viper.GetBool("s3.enabled")
+
 	viper.SetDefault("consul.enabled", true)
 	consulEnabled := viper.GetBool("consul.enabled")
 
-	go s3.Poll(bucket, bucketRegion)
+	if fileEnabled {
+		log.Print("File mode is enabled, disabling s3 and consul watchers")
+		s3Enabled = false
+		consulEnabled = false
+		go file.Poll(directory, account, region)
+	}
+
+	if s3Enabled {
+		go s3.Poll(bucket, bucketRegion)
+	}
 
 	if consulEnabled {
 		go consul.Poll(consulHost)

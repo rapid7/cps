@@ -37,3 +37,21 @@ In order to run this project you need to set the following values in `cps.json` 
 
 - `make build-linux`
 - scp binary to the ec2 instance and run
+
+## running a dev instance with local files
+
+Sometimes it is desirable to run locally using flat files. You can put your service json files into a directory and point to that directory. Note, when file mode is enabled s3 and consul watchers are both disabled. Here is a basic example of how to set up your config for local files:
+
+```
+{
+  "account": "0000000000000",
+  "region": "us-east-1",
+  "file": {
+    "enabled": true,
+    "directory": "./local-files"
+  }
+}
+```
+
+The names of the files in the `./local-files` should be the name of the service.
+
