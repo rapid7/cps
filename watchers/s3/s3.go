@@ -50,7 +50,7 @@ func Poll(bucket, bucketRegion string) {
 		bucketRegion: bucketRegion,
 	}
 
-	Sync(time.Now())
+	Sync()
 
 	ticker := time.NewTicker(60 * time.Second)
 	quit := make(chan struct{})
@@ -58,7 +58,7 @@ func Poll(bucket, bucketRegion string) {
 		for {
 			select {
 			case <-ticker.C:
-				Sync(time.Now())
+				Sync()
 			case <-quit:
 				ticker.Stop()
 				return
@@ -67,19 +67,19 @@ func Poll(bucket, bucketRegion string) {
 	}()
 }
 
-func Sync(t time.Time) {
-	log.Print("s3 sync begun")
-
-	bucket := Config.bucket
-	region := Config.bucketRegion
-
+func setUpAwsSession(region string) *s3.S3 {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Region: aws.String(region),
 		},
 	}))
+
 	svc := s3.New(sess)
 
+	return svc
+}
+
+func listBucket(bucket string, svc *s3.S3) (*s3.ListObjectsOutput, error) {
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 	}
@@ -88,9 +88,13 @@ func Sync(t time.Time) {
 	if err != nil {
 		log.Errorf("Error listing s3 objects %v:", err)
 		Health = false
-		return
+		return nil, err
 	}
 
+	return resp, nil
+}
+
+func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc *s3.S3) {
 	var wg sync.WaitGroup
 	wg.Add(len(resp.Contents))
 
@@ -107,6 +111,20 @@ func Sync(t time.Time) {
 	}
 
 	wg.Wait()
+}
+
+func Sync() {
+	log.Print("s3 sync begun")
+
+	bucket := Config.bucket
+	region := Config.bucketRegion
+
+	svc := setUpAwsSession(region)
+	resp, err := listBucket(bucket, svc)
+	if err != nil {
+		return
+	}
+	parseAllFiles(resp, bucket, svc)
 
 	Up = true
 	Health = true
