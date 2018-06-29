@@ -1,0 +1,8 @@
+{
+  "account": "000000000000",
+  "region": "us-east-1",
+  "file": {
+    "enabled": true,
+    "directory": "/services"
+  }
+}
