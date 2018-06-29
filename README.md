@@ -55,3 +55,10 @@ Sometimes it is desirable to run locally using flat files. You can put your serv
 
 The names of the files in the `./local-files` should be the name of the service.
 
+## running in docker
+
+There is a Dockerfile at the root of the project that is meant to be used in local file mode. You can modify `dockerfiles/cps.json` and add/remove services from the `dockerfiles/services` directory to change what properties are returned. Here are the steps to get started quickly:
+
+1. `docker build -t cps .`
+2. `docker run -p 9100:9100 -it cps`
+3. `curl localhost:9100/v1/properties/your-service`

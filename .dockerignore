@@ -1,0 +1,13 @@
+# Directories
+vendor/
+local-files/
+.git/
+
+# Files
+cps.json
+cps.yml
+cps.yaml
+
+# Binaries
+cps
+cps_linux_amd64

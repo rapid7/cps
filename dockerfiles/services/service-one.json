@@ -1,0 +1,7 @@
+{
+  "properties": {
+    "my.first.property": "foo",
+    "my.second.property": false,
+    "my.third.property": 3
+  }
+}
