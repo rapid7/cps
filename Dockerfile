@@ -10,7 +10,12 @@ RUN apk add --update-cache git && \
   dep ensure -v && go build -o /cps -v && \
   rm -rf /go/src/cps/*
 
-ADD dockerfiles/cps.json /etc/cps
+FROM alpine:latest
+
+WORKDIR /
+
+COPY --from=0 /cps .
+ADD dockerfiles/cps.json /
 ADD dockerfiles/services/ /services
 
 EXPOSE 9100/tcp
