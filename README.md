@@ -2,6 +2,8 @@
 
 CPS is a centralized dynamic property service. It serves up the precomputed properties for a service as well as dynamic consul properties in the form of `conqueso.service.ips=`. It also supports AWS SSM Parameter Store SecureStrings.
 
+See [cps-property-generator](https://github.com/rapid7/cps-property-generator) for generating json property files and uploading them to s3.
+
 ## configuration
 
 In order to run this project you need to set the following values in `cps.json` at the root of the project:
