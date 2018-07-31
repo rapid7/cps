@@ -189,8 +189,7 @@ func parsePropertyFile(k string, b string, svc *s3.S3) {
 				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				s, err := secret.GetSSMSecret(string(key), value)
 				if err != nil {
-					log.Error(err)
-					return err
+					handleSecretFailure(err, properties, string(key), path)
 				} else {
 					properties[string(key)] = s
 				}
@@ -205,5 +204,18 @@ func parsePropertyFile(k string, b string, svc *s3.S3) {
 
 	} else {
 		log.Printf("Skipping: %v.\n", k)
+	}
+}
+
+func handleSecretFailure(err error, properties map[string]interface{}, key, path string) {
+	if err.Error() != "Object is not an SSM stanza" {
+		k := kv.GetProperty(path)
+		if k != nil {
+			v := k.(map[string]interface{})
+			if v[string(key)] != nil {
+				sv := v[string(key)].(string)
+				properties[string(key)] = sv
+			}
+		}
 	}
 }
