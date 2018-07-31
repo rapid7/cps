@@ -13,13 +13,10 @@ import (
 **/
 var (
 	Cache = sync.Map{}
-	count = 0
 )
 
 func WriteProperty(k string, v interface{}) error {
-	count++
 	Cache.Store(k, v)
-	log.Debugf("Count: %v", count)
 	return nil
 }
 
