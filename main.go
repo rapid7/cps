@@ -92,6 +92,10 @@ func main() {
 		cq.GetConquesoProperties(w, r, account, region)
 	}).Methods("GET")
 
+	router.HandleFunc("/v1/properties/{service}/{property}", func(w http.ResponseWriter, r *http.Request) {
+		props.GetProperty(w, r, account, region)
+	}).Methods("GET")
+
 	router.HandleFunc("/v1/conqueso/{service}", cq.PostConqueso).Methods("POST")
 
 	// Health returns detailed information about CPS health.

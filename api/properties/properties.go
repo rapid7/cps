@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strconv"
 
 	mux "github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -67,4 +68,43 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account string, regio
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(j)
 	}
+}
+
+func GetProperty(w http.ResponseWriter, r *http.Request, account, region string) {
+	vars := mux.Vars(r)
+	service := vars["service"]
+	property := vars["property"]
+
+	var path bytes.Buffer
+	path.WriteString(account)
+	path.WriteString("/")
+	path.WriteString(region)
+	path.WriteString("/")
+	path.WriteString(service)
+
+	serviceProperties := kv.GetProperty(path.String()).(map[string]interface{})
+	serviceProperty := serviceProperties[property]
+
+	var output bytes.Buffer
+	var line string
+	switch t := serviceProperty.(type) {
+	case string:
+		line = serviceProperty.(string)
+	case int:
+		line = strconv.Itoa(serviceProperty.(int))
+	case bool:
+		line = strconv.FormatBool(serviceProperty.(bool))
+	case float64:
+		line = strconv.FormatFloat(serviceProperty.(float64), 'f', -1, 64)
+	case nil:
+		line = "{}"
+	default:
+		log.Errorf("Could not parse %v:%v, v is of type %T", property, serviceProperty, t)
+		line = "{}"
+	}
+
+	output.WriteString(line)
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write(output.Bytes())
 }
