@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/buger/jsonparser"
 
 	log "github.com/sirupsen/logrus"
@@ -67,19 +68,42 @@ func Poll(bucket, bucketRegion string) {
 	}()
 }
 
-func setUpAwsSession(region string) *s3.S3 {
+func Sync() {
+	log.Print("s3 sync begun")
+
+	bucket := Config.bucket
+	region := Config.bucketRegion
+
+	svc := setUpAwsSession(region)
+	resp, err := listBucket(bucket, svc)
+	if err != nil {
+		return
+	}
+
+	err = parseAllFiles(resp, bucket, svc)
+	if err != nil {
+		return
+	}
+
+	Up = true
+	Health = true
+
+	log.Print("S3 sync finished")
+}
+
+func setUpAwsSession(region string) s3iface.S3API {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Region: aws.String(region),
 		},
 	}))
 
-	svc := s3.New(sess)
+	var svc s3iface.S3API = s3.New(sess)
 
 	return svc
 }
 
-func listBucket(bucket string, svc *s3.S3) (*s3.ListObjectsOutput, error) {
+func listBucket(bucket string, svc s3iface.S3API) (*s3.ListObjectsOutput, error) {
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 	}
@@ -94,7 +118,7 @@ func listBucket(bucket string, svc *s3.S3) (*s3.ListObjectsOutput, error) {
 	return resp, nil
 }
 
-func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc *s3.S3) {
+func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API) error {
 	var wg sync.WaitGroup
 	wg.Add(len(resp.Contents))
 
@@ -111,28 +135,11 @@ func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc *s3.S3) {
 	}
 
 	wg.Wait()
+
+	return nil
 }
 
-func Sync() {
-	log.Print("s3 sync begun")
-
-	bucket := Config.bucket
-	region := Config.bucketRegion
-
-	svc := setUpAwsSession(region)
-	resp, err := listBucket(bucket, svc)
-	if err != nil {
-		return
-	}
-	parseAllFiles(resp, bucket, svc)
-
-	Up = true
-	Health = true
-
-	log.Print("S3 sync finished")
-}
-
-func parsePropertyFile(k string, b string, svc *s3.S3) {
+func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 	isJSON, _ := regexp.Compile(".json$")
 
 	if isJSON.MatchString(k) {

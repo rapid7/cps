@@ -31,6 +31,7 @@
     "private/protocol/xml/xmlutil",
     "service/kms",
     "service/s3",
+    "service/ssm",
     "service/sts"
   ]
   revision = "80dcc100bd75b8742a5ffc6cfc2200efbe5a59d3"
@@ -41,6 +42,12 @@
   name = "github.com/buger/jsonparser"
   packages = ["."]
   revision = "2cac668e8456b4284edb0715e17e2af02d3ec993"
+
+[[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/fsnotify/fsnotify"
@@ -137,6 +144,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
@@ -176,6 +189,21 @@
   version = "v1.0.2"
 
 [[projects]]
+  name = "github.com/stretchr/objx"
+  packages = ["."]
+  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
+  version = "v0.1.1"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = [
+    "assert",
+    "mock"
+  ]
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -212,6 +240,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1d80b278988436bda004e83a188f55ce519d42a075d27fbdf8fc442d347c007d"
+  inputs-digest = "eaa9ff3aab0c0195c11b7fafb5d221505447873f2cdbb7ea531abce4b4f02e8c"
   solver-name = "gps-cdcl"
   solver-version = 1
