@@ -59,21 +59,13 @@ func Sync(t time.Time) {
 	log.Print("consul sync begun")
 
 	consulHost := Config.host
-	consulConfig := api.DefaultConfig()
-	consulConfig.Address = consulHost
-	consulConfig.Scheme = "http"
-
-	client, err := api.NewClient(consulConfig)
+	client, err := setUpConsulClient(consulHost)
 	if err != nil {
-		log.Errorf("Consul error: %v\n", err)
 		return
 	}
 
-	catalog := client.Catalog()
-	qo := api.QueryOptions{}
-	services, _, err := catalog.Services(&qo)
+	services, qo, err := getServices(client)
 	if err != nil {
-		log.Errorf("Catalog/services error: %v", err)
 		return
 	}
 
@@ -98,13 +90,42 @@ func Sync(t time.Time) {
 
 	wg.Wait()
 
-	kv.WriteProperty("consul", healthyNodes)
-	kv.GetProperty("consul")
+	writeProperties()
 
 	Health = true
 	Up = true
 
 	log.Print("Consul sync is finished")
+}
+
+func setUpConsulClient(consulHost string) (*api.Client, error) {
+	consulConfig := api.DefaultConfig()
+	consulConfig.Address = consulHost
+	consulConfig.Scheme = "http"
+
+	client, err := api.NewClient(consulConfig)
+	if err != nil {
+		log.Errorf("Consul error: %v\n", err)
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func getServices(client *api.Client) (map[string][]string, api.QueryOptions, error) {
+	catalog := client.Catalog()
+	qo := api.QueryOptions{}
+	services, _, err := catalog.Services(&qo)
+	if err != nil {
+		log.Errorf("Catalog/services error: %v", err)
+		return nil, qo, err
+	}
+
+	return services, qo, nil
+}
+
+func writeProperties() {
+	kv.WriteProperty("consul", healthyNodes)
 }
 
 func getServiceHealth(key string, client *api.Client, qo api.QueryOptions, m *sync.Mutex) {
