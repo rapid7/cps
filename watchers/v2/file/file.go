@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	kv "cps/pkg/kv"
@@ -61,15 +62,21 @@ func Sync(t time.Time) {
 
 	for _, f := range files {
 		fn := f.Name()
-		fullPath := absPath + "/" + fn
-		shortPath := fn[0 : len(fn)-5]
-		storePath := "account/" + Config.account + "/kubernetes/" + Config.region + "/service/" + shortPath
+		if strings.Contains(fn, ".json") {
+			fullPath := absPath + "/" + fn
+			shortPath := fn[0 : len(fn)-5]
 
-		jsonBytes, _ := ioutil.ReadFile(fullPath)
+			jsonBytes, err := ioutil.ReadFile(fullPath)
+			if err != nil {
+				log.Error(err)
+				return
+			}
 
-		log.Print(storePath)
-
-		kv.WriteProperty(storePath, jsonBytes)
+			kv.WriteProperty(shortPath, jsonBytes)
+		} else {
+			log.Errorf("File does not have the json extension: %v", fn)
+			return
+		}
 	}
 
 }
