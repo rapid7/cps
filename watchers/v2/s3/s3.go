@@ -1,11 +1,11 @@
 package s3
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"regexp"
-	"runtime"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,9 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/peterbourgon/mergemap"
 
 	log "github.com/sirupsen/logrus"
 
+	index "cps/pkg/index"
 	kv "cps/pkg/kv"
 )
 
@@ -67,7 +69,7 @@ func Sync() {
 	region := Config.bucketRegion
 
 	svc := setUpAwsSession(region)
-	resp, err := listBucket(bucket, svc)
+	resp, err := listBucket(bucket, region, svc)
 	if err != nil {
 		return
 	}
@@ -95,44 +97,107 @@ func setUpAwsSession(region string) s3iface.S3API {
 	return svc
 }
 
-func listBucket(bucket string, svc s3iface.S3API) (*s3.ListObjectsOutput, error) {
-	params := &s3.ListObjectsInput{
-		Bucket: aws.String(bucket),
-	}
+func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutput, error) {
 
-	resp, err := svc.ListObjects(params)
+	i, err := index.ParseIndex(bucket, region)
 	if err != nil {
-		log.Errorf("Error listing s3 objects %v:", err)
-		Health = false
 		return nil, err
 	}
 
-	return resp, nil
-}
+	var responses []*s3.ListObjectsOutput
 
-func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API) error {
-	var wg sync.WaitGroup
-	wg.Add(len(resp.Contents))
+	for _, prefix := range i {
+		params := &s3.ListObjectsInput{
+			Bucket: aws.String(bucket),
+			Prefix: aws.String(prefix),
+		}
 
-	numCores := runtime.NumCPU()
-	guard := make(chan struct{}, numCores*32)
+		resp, err := svc.ListObjects(params)
+		if err != nil {
+			log.Errorf("Error listing s3 objects %v:", err)
+			Health = false
+			return nil, err
+		}
 
-	for _, key := range resp.Contents {
-		guard <- struct{}{}
-		go func(key *s3.Object) {
-			defer wg.Done()
-			parsePropertyFile(*key.Key, bucket, svc)
-			<-guard
-		}(key)
+		responses = append(responses, resp)
 	}
 
-	wg.Wait()
+	return responses, nil
+}
 
+func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3API) error {
+
+	var files []string
+
+	for _, object := range resp {
+		for _, key := range object.Contents {
+			files = append(files, *key.Key)
+		}
+	}
+
+	getPropertyFiles(files, bucket, svc)
 	return nil
 }
 
-func parsePropertyFile(k string, b string, svc s3iface.S3API) {
+func getPropertyFiles(files []string, b string, svc s3iface.S3API) {
+	services := make(map[string][]byte)
+	globals := make(map[int][]byte)
+
+	i := 0
+	for _, f := range files {
+		body, isService, _ := getFile(f, b, svc)
+		if isService {
+			pathSplit := strings.Split(f, "/")
+			service := pathSplit[len(pathSplit)-1]
+			serviceName := service[0 : len(service)-5]
+			services[serviceName] = body
+		} else {
+			globals[i] = body
+		}
+		i++
+	}
+
+	s, err := mergeAll(globals, services)
+	if err != nil {
+		log.Errorf("%v", err)
+		return
+	}
+
+	for k, v := range s {
+		kv.WriteProperty(k, v)
+	}
+}
+
+func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]byte, error) {
+	var m1, m2, m3 map[string]interface{}
+	var lastMerged map[string]interface{}
+
+	for i := 0; i < len(globals); i++ {
+		if lastMerged != nil {
+			m1 = lastMerged
+		} else {
+			_ = json.Unmarshal(globals[i], &m1)
+		}
+		_ = json.Unmarshal(globals[i+1], &m2)
+		mergemap.Merge(m1, m2)
+		lastMerged = m1
+	}
+
+	mergedServices := make(map[string][]byte)
+	for k, s := range services {
+		_ = json.Unmarshal(s, &m3)
+		mergemap.Merge(m3, m1)
+		finalBytes, _ := json.Marshal(m3)
+		mergedServices[k] = finalBytes
+	}
+
+	return mergedServices, nil
+}
+
+func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 	isJSON, _ := regexp.Compile(".json$")
+
+	var body []byte
 
 	if isJSON.MatchString(k) {
 		result, err := svc.GetObject(&s3.GetObjectInput{
@@ -144,27 +209,31 @@ func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
 				log.Errorf("Download canceled due to timeout %v\n", err)
 				Health = false
-				return
+				return nil, false, err
 			} else {
 				log.Errorf("Failed to download object: %v", err)
 				Health = false
-				return
+				return nil, false, err
 			}
 		}
 
-		body, err := ioutil.ReadAll(result.Body)
+		body, err = ioutil.ReadAll(result.Body)
 		if err != nil {
 			log.Errorf("Failure to read body: %v\n", err)
 			Health = false
-			return
+			return nil, false, err
 		}
-
-		// Removes .json extension.
-		path := k[0 : len(k)-5]
-
-		kv.WriteProperty(path, body)
-
 	} else {
 		log.Printf("Skipping: %v.\n", k)
 	}
+
+	var isService bool
+
+	if strings.Contains(k, "service") {
+		isService = true
+	} else {
+		isService = false
+	}
+
+	return body, isService, nil
 }

@@ -162,6 +162,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/peterbourgon/mergemap"
+  packages = ["."]
+  revision = "e21c03b7a721e413718d2703181ead350d3c9d6f"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -276,6 +282,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c2efc54b16e233b00b00574cf93a49cf94fd1c1972d2454f649095879d8e7121"
+  inputs-digest = "ab7a9be8c5c8760cb4cea80d0422a483583b40e081c1a4e8bd06c1128aeba115"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -29,18 +29,14 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account, region strin
 	scope := strings.Split(vars["scope"], "/")
 	service := scope[0]
 	fullPath := scope[1:len(scope)]
-	log.Println(kv.Cache)
 
-	var path bytes.Buffer
-	path.WriteString("account/")
-	path.WriteString(account)
-	path.WriteString("/kubernetes/")
-	path.WriteString(region)
-	path.WriteString("/service/")
-	path.WriteString(service)
-
-	jsoni := kv.GetProperty(path.String())
-	jb := jsoni.([]byte)
+	jsoni := kv.GetProperty(service)
+	var jb []byte
+	if jsoni != nil {
+		jb = jsoni.([]byte)
+	} else {
+		return
+	}
 
 	b := new(bytes.Buffer)
 	if err := json.Compact(b, jb); err != nil {
