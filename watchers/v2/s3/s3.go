@@ -36,6 +36,10 @@ type config struct {
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
+
+	Up = false
+	Health = false
+
 	log.Print("starting v2 s3 watcher...")
 }
 
@@ -64,9 +68,6 @@ func Poll(bucket, bucketRegion string) {
 
 func Sync() {
 	log.Print("s3 sync begun")
-
-	Up = false
-	Health = false
 
 	bucket := Config.bucket
 	region := Config.bucketRegion
