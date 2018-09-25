@@ -13,12 +13,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
 	log "github.com/sirupsen/logrus"
+
+	ec2meta "cps/pkg/ec2meta"
 )
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 }
+
+var (
+	metadata ec2meta.Instance
+)
 
 type Source struct {
 	Name       string `yaml:"name"`
@@ -83,6 +89,8 @@ func getIndexFromS3(b, region string) ([]byte, error) {
 		return nil, err
 	}
 
+	metadata = ec2meta.Populate(true, sess)
+
 	body, err := ioutil.ReadAll(result.Body)
 	if err != nil {
 		log.Errorf("Failure to read body: %v\n", err)
@@ -102,21 +110,21 @@ func injectPath(path string) string {
 			switch {
 			case strings.Contains(p, "instance:account"):
 				if i == (len(split) - 1) {
-					injectedPath.WriteString("00000000000.json")
+					injectedPath.WriteString(metadata.Account + ".json")
 				} else {
-					injectedPath.WriteString("00000000000/")
+					injectedPath.WriteString(metadata.Account + "/")
 				}
 			case strings.Contains(p, "instance:vpc"):
 				if i == (len(split) - 1) {
-					injectedPath.WriteString("vpc-0000000.json")
+					injectedPath.WriteString(metadata.VpcID + ".json")
 				} else {
-					injectedPath.WriteString("vpc-0000000/")
+					injectedPath.WriteString(metadata.VpcID + "/")
 				}
 			case strings.Contains(p, "instance:region"):
 				if i == (len(split) - 1) {
-					injectedPath.WriteString("us-east-1.json")
+					injectedPath.WriteString(metadata.Region + ".json")
 				} else {
-					injectedPath.WriteString("us-east-1/")
+					injectedPath.WriteString(metadata.Region + "/")
 				}
 			default:
 				injectedPath.WriteString("")
