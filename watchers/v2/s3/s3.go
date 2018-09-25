@@ -65,6 +65,9 @@ func Poll(bucket, bucketRegion string) {
 func Sync() {
 	log.Print("s3 sync begun")
 
+	Up = false
+	Health = false
+
 	bucket := Config.bucket
 	region := Config.bucketRegion
 
