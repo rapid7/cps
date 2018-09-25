@@ -71,6 +71,9 @@ func main() {
 	viper.SetDefault("api.version", 1)
 	apiVersion := viper.GetInt("api.version")
 
+	viper.SetDefault("port", "9100")
+	port := viper.GetString("port")
+
 	router := mux.NewRouter()
 
 	if apiVersion == 2 {
@@ -128,6 +131,6 @@ func main() {
 	}
 
 	// Serve it.
-	log.Print(http.ListenAndServe(":9100", router))
+	log.Print(http.ListenAndServe(":"+port, router))
 
 }
