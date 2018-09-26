@@ -61,8 +61,6 @@ func Populate(online bool, sess *session.Session) Instance {
 	if online == true {
 		svc := ec2metadata.New(sess)
 
-		log.Println(svc)
-
 		metadata := Instance{
 			AmiID:            getAmiID(svc),
 			AvailabilityZone: getAvailabilityZone(svc),

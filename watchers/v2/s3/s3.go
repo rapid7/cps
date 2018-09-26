@@ -139,11 +139,14 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 		}
 	}
 
-	getPropertyFiles(files, bucket, svc)
+	err := getPropertyFiles(files, bucket, svc)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func getPropertyFiles(files []string, b string, svc s3iface.S3API) {
+func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 	services := make(map[string][]byte)
 	globals := make(map[int][]byte)
 
@@ -164,12 +167,14 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) {
 	s, err := mergeAll(globals, services)
 	if err != nil {
 		log.Errorf("%v", err)
-		return
+		return err
 	}
 
 	for k, v := range s {
 		kv.WriteProperty(k, v)
 	}
+
+	return nil
 }
 
 func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]byte, error) {
@@ -180,10 +185,17 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 		if lastMerged != nil {
 			m1 = lastMerged
 		} else {
-			_ = json.Unmarshal(globals[i], &m1)
+			err := json.Unmarshal(globals[i], &m1)
+			if err != nil {
+				return nil, err
+			}
 		}
-		_ = json.Unmarshal(globals[i+1], &m2)
+		err := json.Unmarshal(globals[i+1], &m2)
+		if err != nil {
+			return nil, err
+		}
 		mergemap.Merge(m1, m2)
+
 		lastMerged = m1
 	}
 

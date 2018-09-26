@@ -10,6 +10,7 @@ import (
 	cq "cps/api/conqueso"
 	health "cps/api/health"
 	props "cps/api/properties"
+	v2health "cps/api/v2/health"
 	v2props "cps/api/v2/properties"
 	kv "cps/pkg/kv"
 	consul "cps/watchers/consul"
@@ -91,6 +92,9 @@ func main() {
 		if s3Enabled {
 			go v2s3.Poll(bucket, bucketRegion)
 		}
+
+		router.HandleFunc("/v2/healthz", v2health.GetHealthz).Methods("GET")
+
 	} else {
 		if fileEnabled {
 			log.Print("File mode is enabled, disabling s3 and consul watchers")
