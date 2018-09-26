@@ -41,7 +41,6 @@ func init() {
 
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	log.Print("connecting to s3...")
 	// log.SetLevel(log.DebugLevel)
 }
 

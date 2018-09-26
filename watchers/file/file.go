@@ -19,7 +19,6 @@ import (
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	log.Print("connecting to consul...")
 }
 
 var (

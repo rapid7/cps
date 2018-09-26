@@ -39,8 +39,6 @@ func init() {
 
 	Up = false
 	Health = false
-
-	log.Print("starting v2 s3 watcher...")
 }
 
 func Poll(bucket, bucketRegion string) {

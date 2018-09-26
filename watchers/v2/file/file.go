@@ -14,7 +14,6 @@ import (
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	log.Print("starting v2 file watcher...")
 }
 
 var (
