@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	consul "cps/watchers/consul"
-	s3 "cps/watchers/s3"
+	consul "cps/watchers/v1/consul"
+	s3 "cps/watchers/v1/s3"
 
 	log "github.com/sirupsen/logrus"
 )

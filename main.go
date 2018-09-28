@@ -13,9 +13,9 @@ import (
 	v2health "cps/api/v2/health"
 	v2props "cps/api/v2/properties"
 	kv "cps/pkg/kv"
-	consul "cps/watchers/consul"
-	file "cps/watchers/file"
-	s3 "cps/watchers/s3"
+	consul "cps/watchers/v1/consul"
+	file "cps/watchers/v1/file"
+	s3 "cps/watchers/v1/s3"
 	v2file "cps/watchers/v2/file"
 	v2s3 "cps/watchers/v2/s3"
 
