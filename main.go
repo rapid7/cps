@@ -7,9 +7,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 
-	cq "cps/api/conqueso"
-	health "cps/api/health"
-	props "cps/api/properties"
+	cq "cps/api/v1/conqueso"
+	health "cps/api/v1/health"
+	props "cps/api/v1/properties"
 	v2health "cps/api/v2/health"
 	v2props "cps/api/v2/properties"
 	kv "cps/pkg/kv"
