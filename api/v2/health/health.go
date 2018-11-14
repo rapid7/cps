@@ -16,10 +16,9 @@ type Response struct {
 
 func GetHealthz(w http.ResponseWriter, r *http.Request) {
 	var status string
-	if s3.Up == true {
+	status = "down"
+	if s3.Up {
 		status = "up"
-	} else {
-		status = "down"
 	}
 
 	data, err := json.Marshal(Response{
