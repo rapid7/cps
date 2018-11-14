@@ -188,13 +188,19 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 				return nil, err
 			}
 		}
-		err := json.Unmarshal(globals[i+1], &m2)
-		if err != nil {
-			return nil, err
-		}
-		mergemap.Merge(m1, m2)
 
-		lastMerged = m1
+		if globals[i+1] == nil {
+		} else {
+			err := json.Unmarshal(globals[i+1], &m2)
+			if err != nil {
+				log.Println(string(globals[i+1]))
+				log.Errorf("This is where its failing %v", err)
+				return nil, err
+			}
+			mergemap.Merge(m1, m2)
+
+			lastMerged = m1
+		}
 	}
 
 	mergedServices := make(map[string][]byte)
@@ -205,6 +211,7 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 		finalBytes, _ := json.Marshal(m3)
 		mergedServices[k] = finalBytes
 	}
+
 	return mergedServices, nil
 }
 
