@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	s3 "cps/watchers/v2/s3"
+	"cps/watchers/v2/s3"
 
 	log "github.com/sirupsen/logrus"
 )
