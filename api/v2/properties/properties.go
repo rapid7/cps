@@ -28,17 +28,7 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account, region strin
 	vars := mux.Vars(r)
 	scope := strings.Split(vars["scope"], "/")
 	service := scope[0]
-
-	var fullPath []string
-	if len(scope) <= 1 {
-		w.Header().Set("Content-Type", "application/json")
-		e, _ := json.Marshal(Error{
-			Status: "No service provided",
-		})
-		w.Write(e)
-	} else {
-		fullPath = scope[1:len(scope)]
-	}
+	fullPath := scope[1:len(scope)]
 
 	jsoni := kv.GetProperty(service)
 	var jb []byte
