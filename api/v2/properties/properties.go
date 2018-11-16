@@ -31,12 +31,12 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account, region strin
 	fullPath := scope[1:len(scope)]
 
 	jsoni := kv.GetProperty(service)
-	var jb []byte
-	if jsoni != nil {
-		jb = jsoni.([]byte)
-	} else {
+
+	if jsoni == nil {
 		return
 	}
+
+	jb := jsoni.([]byte)
 
 	b := new(bytes.Buffer)
 	if err := json.Compact(b, jb); err != nil {
