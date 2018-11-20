@@ -74,8 +74,7 @@ func Sync() {
 		return
 	}
 
-	err = parseAllFiles(resp, bucket, svc)
-	if err != nil {
+	if err := parseAllFiles(resp, bucket, svc); err != nil {
 		return
 	}
 
