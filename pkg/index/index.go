@@ -88,6 +88,8 @@ func getIndexFromS3(b, region string) ([]byte, error) {
 		return nil, err
 	}
 
+	defer result.Body.Close()
+
 	metadata = ec2meta.Populate(true, sess)
 
 	body, err := ioutil.ReadAll(result.Body)
