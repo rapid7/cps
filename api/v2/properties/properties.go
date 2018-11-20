@@ -24,7 +24,7 @@ type Error struct {
 	Status string `json:"status"`
 }
 
-func GetProperties(w http.ResponseWriter, r *http.Request, account, region string) {
+func GetProperties(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	scope := strings.Split(vars["scope"], "/")
 	service := scope[0]

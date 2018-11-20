@@ -79,7 +79,7 @@ func main() {
 
 	if apiVersion == 2 {
 		router.HandleFunc("/v2/properties/{scope:.*}", func(w http.ResponseWriter, r *http.Request) {
-			v2props.GetProperties(w, r, account, region)
+			v2props.GetProperties(w, r)
 		}).Methods("GET")
 
 		if fileEnabled {
