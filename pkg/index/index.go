@@ -48,8 +48,7 @@ func ParseIndex(b, region string) ([]string, error) {
 
 	var index Index
 
-	err = json.Unmarshal(jsonBytes, &index)
-	if err != nil {
+	if err := json.Unmarshal(jsonBytes, &index); err != nil {
 		log.Errorf("Error parsing yaml: %v", err)
 		return nil, err
 	}
