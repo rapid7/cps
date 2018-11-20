@@ -73,6 +73,7 @@ func Sync() {
 	svc := setUpAwsSession(region)
 	resp, err := listBucket(bucket, region, svc)
 	if err != nil {
+		log.Error(err)
 		return
 	}
 

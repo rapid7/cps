@@ -42,14 +42,12 @@ type Index struct {
 func ParseIndex(b, region string) ([]string, error) {
 	jsonBytes, err := getIndexFromS3(b, region)
 	if err != nil {
-		log.Errorf("Error getting index from S3: %v", err)
 		return nil, err
 	}
 
 	var index Index
 
 	if err := json.Unmarshal(jsonBytes, &index); err != nil {
-		log.Errorf("Error parsing yaml: %v", err)
 		return nil, err
 	}
 
@@ -84,7 +82,6 @@ func getIndexFromS3(b, region string) ([]byte, error) {
 	})
 
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 
@@ -94,7 +91,6 @@ func getIndexFromS3(b, region string) ([]byte, error) {
 
 	body, err := ioutil.ReadAll(result.Body)
 	if err != nil {
-		log.Errorf("Failure to read body: %v\n", err)
 		return nil, err
 	}
 
