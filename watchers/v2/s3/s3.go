@@ -36,9 +36,6 @@ type config struct {
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-
-	Up = false
-	Health = false
 }
 
 func Poll(bucket, bucketRegion string) {
