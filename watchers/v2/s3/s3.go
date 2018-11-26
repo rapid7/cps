@@ -201,7 +201,9 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 
 	mergedServices := make(map[string][]byte)
 	for k, s := range services {
-		_ = json.Unmarshal(s, &m3)
+		if err := json.Unmarshal(s, &m3); err != nil {
+			return nil, err
+		}
 		mergemap.Merge(m3, m1)
 		// TODO: append instance metadata
 		finalBytes, _ := json.Marshal(m3)
