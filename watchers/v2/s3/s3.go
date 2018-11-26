@@ -191,10 +191,7 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 
 		if globals[i+1] == nil {
 		} else {
-			err := json.Unmarshal(globals[i+1], &m2)
-			if err != nil {
-				log.Println(string(globals[i+1]))
-				log.Errorf("This is where its failing %v", err)
+			if err := json.Unmarshal(globals[i+1], &m2); err != nil {
 				return nil, err
 			}
 			mergemap.Merge(m1, m2)
