@@ -237,6 +237,7 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 		}
 
 		body, err = ioutil.ReadAll(result.Body)
+		defer result.Body.Close()
 		if err != nil {
 			log.Errorf("Failure to read body: %v\n", err)
 			Health = false
