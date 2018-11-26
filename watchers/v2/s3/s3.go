@@ -134,10 +134,10 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 		}
 	}
 
-	err := getPropertyFiles(files, bucket, svc)
-	if err != nil {
+	if err := getPropertyFiles(files, bucket, svc); err != nil {
 		return err
 	}
+
 	return nil
 }
 
