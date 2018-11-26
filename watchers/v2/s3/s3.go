@@ -250,8 +250,6 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 
 	if strings.Contains(k, "service") {
 		isService = true
-	} else {
-		isService = false
 	}
 
 	return body, isService, nil
