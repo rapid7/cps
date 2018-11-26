@@ -27,6 +27,7 @@ var (
 	Up     bool
 	Health bool
 	Config config
+	isJSON = regexp.MustCompile(".json$")
 	mu     = sync.Mutex{}
 )
 
@@ -214,7 +215,6 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 }
 
 func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
-	isJSON, _ := regexp.Compile(".json$")
 
 	var body []byte
 
