@@ -149,8 +149,7 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 	services := make(map[string][]byte)
 	globals := make(map[int][]byte)
 
-	i := 0
-	for _, f := range files {
+	for i, f := range files {
 		body, isService, _ := getFile(f, b, svc)
 		if isService {
 			pathSplit := strings.Split(f, "/")
