@@ -183,8 +183,7 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 		if lastMerged != nil {
 			m1 = lastMerged
 		} else {
-			err := json.Unmarshal(globals[i], &m1)
-			if err != nil {
+			if err := json.Unmarshal(globals[i], &m1); err != nil {
 				return nil, err
 			}
 		}
