@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -26,6 +27,7 @@ var (
 	Up     bool
 	Health bool
 	Config config
+	mu     = sync.Mutex{}
 )
 
 type config struct {
@@ -78,6 +80,8 @@ func Sync() {
 		return
 	}
 
+	mu.Lock()
+	defer mu.Unlock()
 	Up = true
 	Health = true
 
