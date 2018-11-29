@@ -19,8 +19,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	index "cps/pkg/index"
-	kv "cps/pkg/kv"
+	"cps/pkg/ec2meta"
+	"cps/pkg/index"
+	"cps/pkg/kv"
 )
 
 var (
@@ -177,6 +178,12 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 }
 
 func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]byte, error) {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			Region: aws.String(Config.bucketRegion),
+		},
+	}))
+
 	var m1, m2, m3 map[string]interface{}
 	var lastMerged map[string]interface{}
 
@@ -205,9 +212,20 @@ func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]
 		if err := json.Unmarshal(s, &m3); err != nil {
 			return nil, err
 		}
+
 		mergemap.Merge(m3, m1)
-		// TODO: append instance metadata
-		finalBytes, _ := json.Marshal(m3)
+
+		// Combine instanceAttrs and service properties.
+		// TODO: There has to be a better way. But we lose the
+		// json tags if we marshal to a map.
+		instanceAttrs, _ := json.Marshal(ec2meta.Populate(sess))
+		finalServiceBytes, _ := json.Marshal(m3["properties"])
+		finalServiceBytes = finalServiceBytes[1:]
+		finalServiceBytes = append(finalServiceBytes, []byte("}")...)
+		instanceAttrs = append([]byte("{\"properties\":{\"instance\":"), instanceAttrs...)
+		instanceAttrs = instanceAttrs[:len(instanceAttrs)-1]
+		instanceAttrs = append(instanceAttrs, []byte("},")...)
+		finalBytes := append(instanceAttrs, finalServiceBytes...)
 		mergedServices[k] = finalBytes
 	}
 
