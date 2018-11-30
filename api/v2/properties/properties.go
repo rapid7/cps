@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/kv"
 
 	mux "github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"

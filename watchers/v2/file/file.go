@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	kv "cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/kv"
+
 	log "github.com/sirupsen/logrus"
 )
 

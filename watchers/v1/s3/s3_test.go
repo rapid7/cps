@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"cps/watchers/v1/s3/mocks"
+	"github.com/rapid7/cps/watchers/v1/s3/mocks"
 )
 
 func TestListBucket(t *testing.T) {

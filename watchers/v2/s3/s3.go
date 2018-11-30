@@ -19,9 +19,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"cps/pkg/ec2meta"
-	"cps/pkg/index"
-	"cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/ec2meta"
+	"github.com/rapid7/cps/pkg/index"
+	"github.com/rapid7/cps/pkg/kv"
 )
 
 var (

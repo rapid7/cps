@@ -14,7 +14,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	ec2meta "cps/pkg/ec2meta"
+	"github.com/rapid7/cps/pkg/ec2meta"
 )
 
 func init() {

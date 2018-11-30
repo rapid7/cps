@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/consul/testutil"
 	"github.com/stretchr/testify/assert"
 
-	"cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/kv"
 )
 
 func TestGetServiceHealth(t *testing.T) {

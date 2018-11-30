@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	kv "cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/kv"
 )
 
 var (

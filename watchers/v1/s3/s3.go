@@ -20,8 +20,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	kv "cps/pkg/kv"
-	secret "cps/pkg/secret"
+	"github.com/rapid7/cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/secret"
 )
 
 var (
