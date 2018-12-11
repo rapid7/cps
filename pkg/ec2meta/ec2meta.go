@@ -56,30 +56,11 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
-func Populate(online bool, sess *session.Session) Instance {
+func Populate(sess *session.Session) Instance {
+	svc := ec2metadata.New(sess)
 
-	if online == true {
-		svc := ec2metadata.New(sess)
+	if _, err := os.Stat("/usr/bin/ec2metadata"); err != nil {
 
-		metadata := Instance{
-			AmiID:            getAmiID(svc),
-			AvailabilityZone: getAvailabilityZone(svc),
-			Hostname:         getHostname(svc),
-			InstanceID:       getInstanceID(svc),
-			InstanceType:     getInstanceType(svc),
-			LocalIpv4:        getLocalIpv4(svc),
-			LocalHostname:    getLocalHostname(svc),
-			PublicHostname:   getPublicHostname(svc),
-			PublicIpv4:       getPublicIpv4(svc),
-			ReservationID:    getReservationID(svc),
-			SecurityGroups:   getSecurityGroups(svc),
-			Account:          getAccount(svc),
-			Region:           getRegion(svc),
-			VpcID:            getVpcID(svc),
-		}
-
-		return metadata
-	} else {
 		metadata := Instance{
 			AmiID:            "ami-bcbffad6",
 			AvailabilityZone: "us-east-1a",
@@ -92,13 +73,33 @@ func Populate(online bool, sess *session.Session) Instance {
 			PublicIpv4:       "1.2.3.4",
 			ReservationID:    "r-fake",
 			SecurityGroups:   "fake-fake\nfoo-bar-baz",
-			Account:          "000000000",
+			Account:          "000000000000",
 			Region:           "us-east-1",
 			VpcID:            "vpc-fake",
 		}
 
 		return metadata
 	}
+
+	metadata := Instance{
+		AmiID:            getAmiID(svc),
+		AvailabilityZone: getAvailabilityZone(svc),
+		Hostname:         getHostname(svc),
+		InstanceID:       getInstanceID(svc),
+		InstanceType:     getInstanceType(svc),
+		LocalIpv4:        getLocalIpv4(svc),
+		LocalHostname:    getLocalHostname(svc),
+		PublicHostname:   getPublicHostname(svc),
+		PublicIpv4:       getPublicIpv4(svc),
+		ReservationID:    getReservationID(svc),
+		SecurityGroups:   getSecurityGroups(svc),
+		Account:          getAccount(svc),
+		Region:           getRegion(svc),
+		VpcID:            getVpcID(svc),
+	}
+
+	return metadata
+
 }
 
 func getAmiID(svc *ec2metadata.EC2Metadata) string {
