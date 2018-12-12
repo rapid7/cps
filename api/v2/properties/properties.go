@@ -45,6 +45,9 @@ func GetProperties(w http.ResponseWriter, r *http.Request) {
 
 	j := []byte(b.Bytes())
 
+	// If fullPath is greater than 0 we are returning
+	// a subset of the json if available. The else clause
+	// returns the entire set of properties if available.
 	if len(fullPath) > 0 {
 		f := strings.Join(fullPath, ".")
 		p := gjson.GetBytes(j, "properties")
