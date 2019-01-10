@@ -10,7 +10,7 @@ import (
 	mux "github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 
-	kv "cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/kv"
 )
 
 func init() {

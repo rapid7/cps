@@ -7,5 +7,5 @@ cps
 cps_linux_amd64
 
 # Configs
-/cps.json
+/cps.json*
 /cps.yml

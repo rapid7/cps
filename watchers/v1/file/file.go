@@ -10,8 +10,8 @@ import (
 
 	"github.com/buger/jsonparser"
 
-	kv "cps/pkg/kv"
-	secret "cps/pkg/secret"
+	"github.com/rapid7/cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/secret"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,7 +19,6 @@ import (
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	log.Print("connecting to consul...")
 }
 
 var (

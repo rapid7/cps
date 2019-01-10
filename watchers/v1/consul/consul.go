@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	kv "cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/kv"
 )
 
 var (
@@ -30,7 +30,6 @@ func init() {
 
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	log.Print("connecting to consul...")
 }
 
 func Poll(host string) {
