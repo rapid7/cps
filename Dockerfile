@@ -17,6 +17,7 @@ WORKDIR /
 COPY --from=0 /cps .
 ADD dockerfiles/cps.json /
 ADD dockerfiles/services/ /services
+RUN touch /usr/bin/ec2metadata
 
 EXPOSE 9100/tcp
 
