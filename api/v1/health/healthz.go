@@ -17,8 +17,7 @@ type Response struct {
 }
 
 func GetHealthz(w http.ResponseWriter, r *http.Request) {
-	var status string
-	status = "down"
+	status := "down"
 	if s3.Up == true && consul.Up == true {
 		status = "up"
 	}
