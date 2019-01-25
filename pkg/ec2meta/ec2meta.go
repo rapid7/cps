@@ -105,7 +105,7 @@ func Populate(sess *session.Session) Instance {
 func getAmiID(svc *ec2metadata.EC2Metadata) string {
 	id, err := svc.GetInstanceIdentityDocument()
 	if err != nil {
-		log.Error(err)
+		return ""
 	}
 
 	return id.ImageID
@@ -114,7 +114,6 @@ func getAmiID(svc *ec2metadata.EC2Metadata) string {
 func getAvailabilityZone(svc *ec2metadata.EC2Metadata) string {
 	id, err := svc.GetInstanceIdentityDocument()
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -124,7 +123,6 @@ func getAvailabilityZone(svc *ec2metadata.EC2Metadata) string {
 func getHostname(svc *ec2metadata.EC2Metadata) string {
 	h, err := svc.GetMetadata("/hostname")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -134,7 +132,6 @@ func getHostname(svc *ec2metadata.EC2Metadata) string {
 func getInstanceID(svc *ec2metadata.EC2Metadata) string {
 	id, err := svc.GetInstanceIdentityDocument()
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -144,7 +141,6 @@ func getInstanceID(svc *ec2metadata.EC2Metadata) string {
 func getInstanceType(svc *ec2metadata.EC2Metadata) string {
 	id, err := svc.GetInstanceIdentityDocument()
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -154,7 +150,6 @@ func getInstanceType(svc *ec2metadata.EC2Metadata) string {
 func getLocalIpv4(svc *ec2metadata.EC2Metadata) string {
 	i, err := svc.GetMetadata("/local-ipv4")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -164,7 +159,6 @@ func getLocalIpv4(svc *ec2metadata.EC2Metadata) string {
 func getLocalHostname(svc *ec2metadata.EC2Metadata) string {
 	h, err := svc.GetMetadata("/local-hostname")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -174,7 +168,6 @@ func getLocalHostname(svc *ec2metadata.EC2Metadata) string {
 func getPublicHostname(svc *ec2metadata.EC2Metadata) string {
 	h, err := svc.GetMetadata("/public-hostname")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -184,7 +177,6 @@ func getPublicHostname(svc *ec2metadata.EC2Metadata) string {
 func getPublicIpv4(svc *ec2metadata.EC2Metadata) string {
 	i, err := svc.GetMetadata("/public-ipv4")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -194,7 +186,6 @@ func getPublicIpv4(svc *ec2metadata.EC2Metadata) string {
 func getReservationID(svc *ec2metadata.EC2Metadata) string {
 	r, err := svc.GetMetadata("/reservation-id")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -204,7 +195,6 @@ func getReservationID(svc *ec2metadata.EC2Metadata) string {
 func getSecurityGroups(svc *ec2metadata.EC2Metadata) string {
 	s, err := svc.GetMetadata("/security-groups")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -214,7 +204,6 @@ func getSecurityGroups(svc *ec2metadata.EC2Metadata) string {
 func getAccount(svc *ec2metadata.EC2Metadata) string {
 	id, err := svc.GetInstanceIdentityDocument()
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -224,7 +213,6 @@ func getAccount(svc *ec2metadata.EC2Metadata) string {
 func getRegion(svc *ec2metadata.EC2Metadata) string {
 	id, err := svc.GetInstanceIdentityDocument()
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
@@ -234,13 +222,11 @@ func getRegion(svc *ec2metadata.EC2Metadata) string {
 func getVpcID(svc *ec2metadata.EC2Metadata) string {
 	m, err := svc.GetMetadata("/network/interfaces/macs/")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
 	v, err := svc.GetMetadata("/network/interfaces/macs/" + m + "/vpc-id")
 	if err != nil {
-		log.Error(err)
 		return ""
 	}
 
