@@ -225,7 +225,9 @@ func getVpcID(svc *ec2metadata.EC2Metadata) string {
 		return ""
 	}
 
-	v, err := svc.GetMetadata("/network/interfaces/macs/" + m + "/vpc-id")
+	firstMac := strings.Split(m, "\n")[0]
+
+	v, err := svc.GetMetadata("/network/interfaces/macs/" + firstMac + "/vpc-id")
 	if err != nil {
 		return ""
 	}
