@@ -2,6 +2,7 @@ package ec2meta
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	// "github.com/aws/aws-sdk-go/aws"
