@@ -26,6 +26,36 @@ func GetSSMSecret(k string, v []byte) (string, error) {
 	}
 
 	var region string
+	var service string
+	if _, ok := j["$ssm"].(map[string]interface{})["service"]; ok {
+		data := j["$ssm"].(map[string]interface{})
+		service = data["service"].(string)
+		region = data["region"].(string)
+		k = "/" + service + "/" + k
+
+		sess := session.Must(session.NewSessionWithOptions(session.Options{
+			Config: aws.Config{
+				Region: aws.String(region),
+			},
+		}))
+
+		svc := ssm.New(sess)
+
+		decrypt := true
+		params := &ssm.GetParameterInput{
+			Name:           &k,
+			WithDecryption: &decrypt,
+		}
+
+		p, err := svc.GetParameter(params)
+		if err != nil {
+			log.Errorf("Error getting SSM parameter %v: %v", k, err)
+			return "", err
+		}
+
+		return *p.Parameter.Value, nil
+	}
+
 	if _, ok := j["$ssm"]; ok {
 		data := j["$ssm"].(map[string]interface{})
 		region = data["region"].(string)
