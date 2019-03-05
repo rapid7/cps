@@ -25,6 +25,10 @@ func GetSSMSecret(k string, v []byte) (string, error) {
 		return "", err
 	}
 
+	if j["$ssm"] == nil {
+		return "", errors.New("$ssm is nil, this is most likely due to an indentation problem")
+	}
+
 	var region string
 	var service string
 	if _, ok := j["$ssm"].(map[string]interface{})["service"]; ok {
