@@ -263,11 +263,9 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 		log.Printf("Skipping: %v.\n", k)
 	}
 
-	var isService bool
-
-	if strings.Contains(k, "service") {
-		isService = true
-	}
+	// We are moving toward a new directory structure without
+	// `service` in the path.
+	isService := true
 
 	return body, isService, nil
 }
