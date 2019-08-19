@@ -103,7 +103,6 @@ func setUpAwsSession(region string) s3iface.S3API {
 }
 
 func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutput, error) {
-
 	i, err := index.ParseIndex(bucket, region)
 	if err != nil {
 		return nil, err
@@ -131,7 +130,6 @@ func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutp
 }
 
 func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3API) error {
-
 	var files []string
 
 	for _, object := range resp {
