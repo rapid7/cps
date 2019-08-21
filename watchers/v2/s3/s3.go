@@ -1,9 +1,9 @@
 package s3
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -15,13 +15,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/peterbourgon/mergemap"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/rapid7/cps/pkg/ec2meta"
 	"github.com/rapid7/cps/pkg/index"
 	"github.com/rapid7/cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/secret"
 )
 
 var (
@@ -146,23 +145,23 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 }
 
 func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
+	// TODO: just make this an interface{}
 	services := make(map[string][]byte)
-	globals := make(map[int][]byte)
 
 	for i, f := range files {
+		// TODO: When this stabilizes, remove isService from getFile,
+		// it is always true.
 		body, isService, _ := getFile(f, b, svc)
 		if isService {
 			pathSplit := strings.Split(f, "/")
 			service := pathSplit[len(pathSplit)-1]
 			serviceName := service[0 : len(service)-5]
 			services[serviceName] = body
-		} else {
-			globals[i] = body
 		}
 		i++
 	}
 
-	s, err := mergeAll(globals, services)
+	s, err := injectSecrets(services)
 	if err != nil {
 		log.Errorf("%v", err)
 		return err
@@ -175,59 +174,49 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 	return nil
 }
 
-func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]byte, error) {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String(Config.bucketRegion),
-		},
-	}))
+func injectSecrets(data interface{}) (map[string]interface{}, error) {
+	d := reflect.ValueOf(data)
+	tmpData := make(map[string]interface{})
 
-	var m1, m2, m3 map[string]interface{}
-	var lastMerged map[string]interface{}
+	log.Info(kv.Cache)
 
-	for i := 0; i < len(globals); i++ {
-		if lastMerged != nil {
-			m1 = lastMerged
-		} else {
-			if err := json.Unmarshal(globals[i], &m1); err != nil {
+	for _, k := range d.MapKeys() {
+		match, _ := regexp.MatchString("$ssm", k.String())
+		typeOfValue := reflect.TypeOf(d.MapIndex(k).Interface()).Kind()
+		if match {
+			key := k.String()
+			secret, err := secret.GetSSMSecret(key, d.MapIndex(k).Bytes())
+			if err != nil {
+				// TODO: final argument is the path in kv.Store
 				return nil, err
+				// handleSecretFailure(err, properties, key, "")
 			}
-		}
-
-		if globals[i+1] == nil {
+			tmpData[key] = secret
 		} else {
-			if err := json.Unmarshal(globals[i+1], &m2); err != nil {
-				return nil, err
+			key := k.String()
+			if typeOfValue == reflect.Map {
+				iter, _ := injectSecrets(d.MapIndex(k).Interface)
+				tmpData[key] = iter
+			} else {
+				tmpData[key] = d.MapIndex(k).Interface()
 			}
-			mergemap.Merge(m1, m2)
-
-			lastMerged = m1
 		}
 	}
 
-	mergedServices := make(map[string][]byte)
-	for k, s := range services {
-		if err := json.Unmarshal(s, &m3); err != nil {
-			return nil, err
+	return tmpData, nil
+}
+
+func handleSecretFailure(err error, properties map[string]interface{}, key, path string) {
+	if err.Error() != "Object is not an SSM stanza" {
+		k := kv.GetProperty(path)
+		if k != nil {
+			v := k.(map[string]interface{})
+			if v[string(key)] != nil {
+				sv := v[string(key)].(string)
+				properties[string(key)] = sv
+			}
 		}
-
-		mergemap.Merge(m3, m1)
-
-		// Combine instanceAttrs and service properties.
-		// TODO: There has to be a better way. But we lose the
-		// json tags if we marshal to a map.
-		instanceAttrs, _ := json.Marshal(ec2meta.Populate(sess))
-		finalServiceBytes, _ := json.Marshal(m3["properties"])
-		finalServiceBytes = finalServiceBytes[1:]
-		finalServiceBytes = append(finalServiceBytes, []byte("}")...)
-		instanceAttrs = append([]byte("{\"properties\":{\"instance\":"), instanceAttrs...)
-		instanceAttrs = instanceAttrs[:len(instanceAttrs)-1]
-		instanceAttrs = append(instanceAttrs, []byte("},")...)
-		finalBytes := append(instanceAttrs, finalServiceBytes...)
-		mergedServices[k] = finalBytes
 	}
-
-	return mergedServices, nil
 }
 
 func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
