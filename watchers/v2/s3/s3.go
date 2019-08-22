@@ -173,9 +173,8 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 		return err
 	}
 
-	log.Infof("SERVICES %v:", s)
+	log.Debugf("All services found: %v", s)
 	for k, v := range s {
-		log.Infof("writing %v to %v", k, v)
 		serviceBytes, _ := json.Marshal(v)
 		kv.WriteProperty(k, serviceBytes)
 	}
@@ -189,28 +188,20 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 	finalData := make(map[string]interface{})
 	d := reflect.ValueOf(data)
 
-	// asset-ui:map
 	tmpData := make(map[string]interface{})
 	for _, k := range d.MapKeys() {
-		log.Info("OUTER KEY: %v", k)
-
 		if reflect.ValueOf(d.MapIndex(k).Interface()).Kind() == reflect.Map {
 			di := reflect.ValueOf(d.MapIndex(k).Interface())
 
 			for _, ik := range di.MapKeys() {
-				log.Infof("INNER KEY %v IS A %t", ik, ik)
 				typeOfValue := reflect.TypeOf(di.MapIndex(ik).Interface()).Kind()
 				if typeOfValue == reflect.Map {
-					log.Infof("CPS THINKS %v is a MAP WITH VALUE %v", k.String(), d.MapIndex(k).Interface())
 					// This is an ssm object, handle it.
 					if _, ok := d.MapIndex(k).Interface().(map[string]interface{})["$ssm"]; ok {
-						log.Infof("GET SECRET: %v", k.String())
-						log.Infof("THE SECRET MMAP: %v", d.MapIndex(k).Interface())
 						secretBytes, _ := json.Marshal(d.MapIndex(k).Interface())
 						s, err := secret.GetSSMSecret(k.String(), secretBytes)
 						if err != nil {
 							log.Error(err)
-							// TODO: final argument is the path in kv.Store
 							return nil, err
 							// handleSecretFailure(err, properties, key, "")
 						}
@@ -219,37 +210,26 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 							tmpData[k.String()] = make(map[string]interface{})
 						}
 
-						// When ckrts process first, nothing else gets processed.
-						log.Infof("ADDING CKRT TO MAP LIKE THIS: %v:%v:%t", k.String(), s, s)
 						tmpData[k.String()] = s
-						log.Infof("TMPDATA WHEN CKRT PROCESSES %v", tmpData)
 						tmpData, _ = injectSecrets(tmpData)
 					} else {
-						log.Infof("CAUGHT STRANGE MAP %v:%v:%t", k.String(), di.MapIndex(ik).Interface())
 						if tmpData[k.String()] == nil {
 							tmpData[k.String()] = make(map[string]interface{})
 						}
 
-						log.Info("k.String: %v", k.String())
 						if _, ok := tmpData[k.String()].(map[string]interface{})[ik.String()]; ok {
 							// inner key exists
 						} else {
 							tmpData[k.String()].(map[string]interface{})[ik.String()] = make(map[string]interface{})
 						}
 
-						log.Info("debug")
 						if typeOfValue == reflect.Map || typeOfValue == reflect.Slice {
-							log.Infof("GOT TO A NESTED MAP OR SLICE %v:%v:%v:%t", k.String(), ik.String(), di.MapIndex(ik).Interface(), di.MapIndex(ik).Interface())
 							tmpData[k.String()].(map[string]interface{})[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
-							log.Infof("TMP DATA: %v", tmpData)
 						} else {
 							tmpData[k.String()].(map[string]interface{})[ik.String()] = di.MapIndex(ik).Interface()
-							log.Infof("TMP DATA: %v", tmpData)
 						}
 					}
 				} else {
-					log.Infof("CATCH ALL IS WRITING %v TO %v[%v]", di.MapIndex(ik).Interface(), k.String(), ik.String())
-
 					if tmpData[k.String()] == nil {
 						tmpData[k.String()] = make(map[string]interface{})
 					}
@@ -259,7 +239,6 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 			}
 		} else {
 			// Not a map, process accordingly.
-			log.Infof("CATCHING STUFF IN THE ULTIMATE CATCH ALL %v:%v:%t", k.String(), d.MapIndex(k).Interface(), d.MapIndex(k).Interface())
 			tmpData[k.String()] = d.MapIndex(k).Interface()
 		}
 	}
