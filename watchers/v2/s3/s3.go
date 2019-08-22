@@ -146,7 +146,6 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 }
 
 func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
-	// TODO: just make this an interface{}
 	services := make(map[string]interface{})
 
 	for i, f := range files {
@@ -158,7 +157,11 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 			service := pathSplit[len(pathSplit)-1]
 			serviceName := service[0 : len(service)-5]
 			serviceProperties := make(map[string]interface{})
-			_ = json.Unmarshal(body, &serviceProperties)
+			err := json.Unmarshal(body, &serviceProperties)
+			if err != nil {
+				log.Errorf("There was an error unmarshalling properties for %v: %v", serviceName, err)
+				return err
+			}
 			services[serviceName] = serviceProperties
 		}
 		i++
@@ -181,8 +184,6 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 
 	return nil
 }
-
-var globalk string
 
 func injectSecrets(data interface{}) (map[string]interface{}, error) {
 	finalData := make(map[string]interface{})
