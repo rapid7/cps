@@ -49,6 +49,17 @@ func GetProperties(w http.ResponseWriter, r *http.Request) {
 	// a subset of the json if available. The else clause
 	// returns the entire set of properties if available.
 	if len(fullPath) > 0 {
+		// Handle keys with "." in them. They need to be
+		// escaped due to how gjson's pathing works. An
+		// unescaped dot tells gjson to go a level deeper
+		// into the json object. We don't want that if the
+		// key itself has dots.
+		for i, p := range fullPath {
+			if strings.Contains(p, ".") {
+				fullPath[i] = strings.Replace(p, ".", "\\.", -1)
+			}
+		}
+
 		f := strings.Join(fullPath, ".")
 		p := gjson.GetBytes(j, "properties")
 		selected := gjson.GetBytes([]byte(p.String()), f)
