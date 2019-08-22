@@ -149,21 +149,19 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 	services := make(map[string]interface{})
 
 	for i, f := range files {
-		// TODO: When this stabilizes, remove isService from getFile,
-		// it is always true.
-		body, isService, _ := getFile(f, b, svc)
-		if isService {
-			pathSplit := strings.Split(f, "/")
-			service := pathSplit[len(pathSplit)-1]
-			serviceName := service[0 : len(service)-5]
-			serviceProperties := make(map[string]interface{})
-			err := json.Unmarshal(body, &serviceProperties)
-			if err != nil {
-				log.Errorf("There was an error unmarshalling properties for %v: %v", serviceName, err)
-				return err
-			}
-			services[serviceName] = serviceProperties
+		body, _ := getFile(f, b, svc)
+		pathSplit := strings.Split(f, "/")
+		service := pathSplit[len(pathSplit)-1]
+		serviceName := service[0 : len(service)-5]
+		serviceProperties := make(map[string]interface{})
+		err := json.Unmarshal(body, &serviceProperties)
+		if err != nil {
+			log.Errorf("There was an error unmarshalling properties for %v: %v", serviceName, err)
+			return err
 		}
+
+		services[serviceName] = serviceProperties
+
 		i++
 	}
 
@@ -241,7 +239,7 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 	return td, nil
 }
 
-func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
+func getFile(k, b string, svc s3iface.S3API) ([]byte, error) {
 
 	var body []byte
 
@@ -255,11 +253,11 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
 				log.Errorf("Download canceled due to timeout %v\n", err)
 				Health = false
-				return nil, false, err
+				return nil, err
 			} else {
 				log.Errorf("Failed to download object: %v", err)
 				Health = false
-				return nil, false, err
+				return nil, err
 			}
 		}
 
@@ -268,15 +266,11 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 		if err != nil {
 			log.Errorf("Failure to read body: %v\n", err)
 			Health = false
-			return nil, false, err
+			return nil, err
 		}
 	} else {
 		log.Printf("Skipping: %v.\n", k)
 	}
 
-	// We are moving toward a new directory structure without
-	// `service` in the path.
-	isService := true
-
-	return body, isService, nil
+	return body, nil
 }
