@@ -179,24 +179,22 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 		kv.WriteProperty(k, serviceBytes)
 	}
 
-	log.Info(kv.Cache)
-
 	return nil
 }
 
 func injectSecrets(data interface{}) (map[string]interface{}, error) {
-	finalData := make(map[string]interface{})
 	d := reflect.ValueOf(data)
 
-	tmpData := make(map[string]interface{})
+	td := make(map[string]interface{})
 	for _, k := range d.MapKeys() {
 		if reflect.ValueOf(d.MapIndex(k).Interface()).Kind() == reflect.Map {
 			di := reflect.ValueOf(d.MapIndex(k).Interface())
 
 			for _, ik := range di.MapKeys() {
-				typeOfValue := reflect.TypeOf(di.MapIndex(ik).Interface()).Kind()
-				if typeOfValue == reflect.Map {
-					// This is an ssm object, handle it.
+				valueT := reflect.TypeOf(di.MapIndex(ik).Interface()).Kind()
+				if valueT == reflect.Map {
+					// This is an ssm object. Get The secret's value
+					// and add it to the map we return.
 					if _, ok := d.MapIndex(k).Interface().(map[string]interface{})["$ssm"]; ok {
 						secretBytes, _ := json.Marshal(d.MapIndex(k).Interface())
 						s, err := secret.GetSSMSecret(k.String(), secretBytes)
@@ -206,44 +204,42 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 							// handleSecretFailure(err, properties, key, "")
 						}
 
-						if tmpData[k.String()] == nil {
-							tmpData[k.String()] = make(map[string]interface{})
+						if td[k.String()] == nil {
+							td[k.String()] = make(map[string]interface{})
 						}
 
-						tmpData[k.String()] = s
-						tmpData, _ = injectSecrets(tmpData)
+						td[k.String()] = s
+						td, _ = injectSecrets(td)
 					} else {
-						if tmpData[k.String()] == nil {
-							tmpData[k.String()] = make(map[string]interface{})
+						// This is not an ssm object, but is an object.
+						// Add it to the map we return.
+						if td[k.String()] == nil {
+							td[k.String()] = make(map[string]interface{})
 						}
 
-						if _, ok := tmpData[k.String()].(map[string]interface{})[ik.String()]; ok {
-							// inner key exists
+						if valueT == reflect.Map || valueT == reflect.Slice {
+							td[k.String()].(map[string]interface{})[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
 						} else {
-							tmpData[k.String()].(map[string]interface{})[ik.String()] = make(map[string]interface{})
-						}
-
-						if typeOfValue == reflect.Map || typeOfValue == reflect.Slice {
-							tmpData[k.String()].(map[string]interface{})[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
-						} else {
-							tmpData[k.String()].(map[string]interface{})[ik.String()] = di.MapIndex(ik).Interface()
+							td[k.String()].(map[string]interface{})[ik.String()] = di.MapIndex(ik).Interface()
 						}
 					}
 				} else {
-					if tmpData[k.String()] == nil {
-						tmpData[k.String()] = make(map[string]interface{})
+					// This is not a map. Add the value to the inner key.
+					if td[k.String()] == nil {
+						td[k.String()] = make(map[string]interface{})
 					}
 
-					tmpData[k.String()].(map[string]interface{})[ik.String()] = di.MapIndex(ik).Interface()
+					td[k.String()].(map[string]interface{})[ik.String()] = di.MapIndex(ik).Interface()
 				}
 			}
 		} else {
-			// Not a map, process accordingly.
-			tmpData[k.String()] = d.MapIndex(k).Interface()
+			// Not a map, this is a top level property. Process
+			// accordingly.
+			td[k.String()] = d.MapIndex(k).Interface()
 		}
 	}
-	finalData = tmpData
-	return finalData, nil
+
+	return td, nil
 }
 
 func handleSecretFailure(err error, properties map[string]interface{}, key, path string) {
