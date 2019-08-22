@@ -201,7 +201,6 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 						if err != nil {
 							log.Error(err)
 							return nil, err
-							// handleSecretFailure(err, properties, key, "")
 						}
 
 						if td[k.String()] == nil {
@@ -240,19 +239,6 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 	}
 
 	return td, nil
-}
-
-func handleSecretFailure(err error, properties map[string]interface{}, key, path string) {
-	if err.Error() != "Object is not an SSM stanza" {
-		k := kv.GetProperty(path)
-		if k != nil {
-			v := k.(map[string]interface{})
-			if v[string(key)] != nil {
-				sv := v[string(key)].(string)
-				properties[string(key)] = sv
-			}
-		}
-	}
 }
 
 func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
