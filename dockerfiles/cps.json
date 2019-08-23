@@ -4,5 +4,8 @@
   "file": {
     "enabled": true,
     "directory": "/services"
+  },
+  "api": {
+    "version": 2
   }
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -15,13 +16,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/peterbourgon/mergemap"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/rapid7/cps/pkg/ec2meta"
 	"github.com/rapid7/cps/pkg/index"
 	"github.com/rapid7/cps/pkg/kv"
+	"github.com/rapid7/cps/pkg/secret"
 )
 
 var (
@@ -103,7 +103,6 @@ func setUpAwsSession(region string) s3iface.S3API {
 }
 
 func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutput, error) {
-
 	i, err := index.ParseIndex(bucket, region)
 	if err != nil {
 		return nil, err
@@ -131,7 +130,6 @@ func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutp
 }
 
 func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3API) error {
-
 	var files []string
 
 	for _, object := range resp {
@@ -148,91 +146,102 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 }
 
 func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
-	services := make(map[string][]byte)
-	globals := make(map[int][]byte)
+	services := make(map[string]interface{})
 
 	for i, f := range files {
-		body, isService, _ := getFile(f, b, svc)
-		if isService {
-			pathSplit := strings.Split(f, "/")
-			service := pathSplit[len(pathSplit)-1]
-			serviceName := service[0 : len(service)-5]
-			services[serviceName] = body
-		} else {
-			globals[i] = body
+		body, _ := getFile(f, b, svc)
+		pathSplit := strings.Split(f, "/")
+		service := pathSplit[len(pathSplit)-1]
+		serviceName := service[0 : len(service)-5]
+		serviceProperties := make(map[string]interface{})
+		err := json.Unmarshal(body, &serviceProperties)
+		if err != nil {
+			log.Errorf("There was an error unmarshalling properties for %v: %v", serviceName, err)
+			return err
 		}
+
+		services[serviceName] = serviceProperties
+
 		i++
 	}
 
-	s, err := mergeAll(globals, services)
+	s, err := injectSecrets(services)
 	if err != nil {
 		log.Errorf("%v", err)
 		return err
 	}
 
+	log.Debugf("All services found: %v", s)
 	for k, v := range s {
-		kv.WriteProperty(k, v)
+		serviceBytes, _ := json.Marshal(v)
+		kv.WriteProperty(k, serviceBytes)
 	}
 
 	return nil
 }
 
-func mergeAll(globals map[int][]byte, services map[string][]byte) (map[string][]byte, error) {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String(Config.bucketRegion),
-		},
-	}))
+func injectSecrets(data interface{}) (map[string]interface{}, error) {
+	d := reflect.ValueOf(data)
 
-	var m1, m2, m3 map[string]interface{}
-	var lastMerged map[string]interface{}
+	td := make(map[string]interface{})
+	for _, k := range d.MapKeys() {
+		if reflect.ValueOf(d.MapIndex(k).Interface()).Kind() == reflect.Map {
+			di := reflect.ValueOf(d.MapIndex(k).Interface())
 
-	for i := 0; i < len(globals); i++ {
-		if lastMerged != nil {
-			m1 = lastMerged
-		} else {
-			if err := json.Unmarshal(globals[i], &m1); err != nil {
-				return nil, err
+			for _, ik := range di.MapKeys() {
+				valueT := reflect.TypeOf(di.MapIndex(ik).Interface()).Kind()
+				if valueT == reflect.Map {
+					// This is an ssm object. Get The secret's value
+					// and add it to the map we return.
+					if _, ok := d.MapIndex(k).Interface().(map[string]interface{})["$ssm"]; ok {
+						secretBytes, _ := json.Marshal(d.MapIndex(k).Interface())
+						s, err := secret.GetSSMSecret(k.String(), secretBytes)
+						if err != nil {
+							log.Error(err)
+							return nil, err
+						}
+
+						if td[k.String()] == nil {
+							td[k.String()] = make(map[string]interface{})
+						}
+
+						td[k.String()] = s
+						td, _ = injectSecrets(td)
+					} else {
+						// This is not an ssm object, but is an object.
+						// Add it to the map we return.
+						if td[k.String()] == nil {
+							td[k.String()] = make(map[string]interface{})
+						}
+
+						keyMap := td[k.String()].(map[string]interface{})
+						if valueT == reflect.Map || valueT == reflect.Slice {
+							keyMap[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
+						} else {
+							keyMap[ik.String()] = di.MapIndex(ik).Interface()
+						}
+					}
+				} else {
+					// This is not a map. Add the value to the inner key.
+					if td[k.String()] == nil {
+						td[k.String()] = make(map[string]interface{})
+					}
+
+					keyMap := td[k.String()].(map[string]interface{})
+					keyMap[ik.String()] = di.MapIndex(ik).Interface()
+				}
 			}
-		}
-
-		if globals[i+1] == nil {
 		} else {
-			if err := json.Unmarshal(globals[i+1], &m2); err != nil {
-				return nil, err
-			}
-			mergemap.Merge(m1, m2)
-
-			lastMerged = m1
+			// Not a map, this is a top level property. Process
+			// accordingly.
+			td[k.String()] = d.MapIndex(k).Interface()
 		}
 	}
 
-	mergedServices := make(map[string][]byte)
-	for k, s := range services {
-		if err := json.Unmarshal(s, &m3); err != nil {
-			return nil, err
-		}
-
-		mergemap.Merge(m3, m1)
-
-		// Combine instanceAttrs and service properties.
-		// TODO: There has to be a better way. But we lose the
-		// json tags if we marshal to a map.
-		instanceAttrs, _ := json.Marshal(ec2meta.Populate(sess))
-		finalServiceBytes, _ := json.Marshal(m3["properties"])
-		finalServiceBytes = finalServiceBytes[1:]
-		finalServiceBytes = append(finalServiceBytes, []byte("}")...)
-		instanceAttrs = append([]byte("{\"properties\":{\"instance\":"), instanceAttrs...)
-		instanceAttrs = instanceAttrs[:len(instanceAttrs)-1]
-		instanceAttrs = append(instanceAttrs, []byte("},")...)
-		finalBytes := append(instanceAttrs, finalServiceBytes...)
-		mergedServices[k] = finalBytes
-	}
-
-	return mergedServices, nil
+	return td, nil
 }
 
-func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
+func getFile(k, b string, svc s3iface.S3API) ([]byte, error) {
 
 	var body []byte
 
@@ -246,11 +255,11 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
 				log.Errorf("Download canceled due to timeout %v\n", err)
 				Health = false
-				return nil, false, err
+				return nil, err
 			} else {
 				log.Errorf("Failed to download object: %v", err)
 				Health = false
-				return nil, false, err
+				return nil, err
 			}
 		}
 
@@ -259,17 +268,11 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, bool, error) {
 		if err != nil {
 			log.Errorf("Failure to read body: %v\n", err)
 			Health = false
-			return nil, false, err
+			return nil, err
 		}
 	} else {
 		log.Printf("Skipping: %v.\n", k)
 	}
 
-	var isService bool
-
-	if strings.Contains(k, "service") {
-		isService = true
-	}
-
-	return body, isService, nil
+	return body, nil
 }
