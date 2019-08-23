@@ -214,10 +214,11 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 							td[k.String()] = make(map[string]interface{})
 						}
 
+						keyMap := td[k.String()].(map[string]interface{})
 						if valueT == reflect.Map || valueT == reflect.Slice {
-							td[k.String()].(map[string]interface{})[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
+							keyMap[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
 						} else {
-							td[k.String()].(map[string]interface{})[ik.String()] = di.MapIndex(ik).Interface()
+							keyMap[ik.String()] = di.MapIndex(ik).Interface()
 						}
 					}
 				} else {
@@ -226,7 +227,8 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 						td[k.String()] = make(map[string]interface{})
 					}
 
-					td[k.String()].(map[string]interface{})[ik.String()] = di.MapIndex(ik).Interface()
+					keyMap := td[k.String()].(map[string]interface{})
+					keyMap[ik.String()] = di.MapIndex(ik).Interface()
 				}
 			}
 		} else {
