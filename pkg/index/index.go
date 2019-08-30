@@ -35,14 +35,13 @@ type Source struct {
 	} `yaml:"parameters"`
 }
 
-// The top level struct which the index is mapped to.
+// Index is the top level struct which the index is mapped to.
 type Index struct {
 	Version float64  `yaml:"version"`
 	Sources []Source `yaml:"sources"`
 }
 
-// This function grabs the index from s3 and returns
-// all paths.
+// ParseIndex grabs the index from s3 and returns all file paths.
 func ParseIndex(b, region string) ([]string, error) {
 	jsonBytes, err := getIndexFromS3(b, region)
 	if err != nil {

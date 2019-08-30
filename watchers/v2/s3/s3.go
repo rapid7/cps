@@ -25,15 +25,15 @@ import (
 )
 
 var (
-	// If true there are no issues with s3.
+	// Up contains the systems availability. If true there are no issues with s3.
 	Up bool
 
-	// If false the watcher could not list objects.
-	// There are still probably objects in the kv
+	// Health contains the system's readiness. If false the watcher
+	// could not list objects. There are still probably objects in the kv
 	// store so the service is still considered "Up".
 	Health bool
 
-	// Exports the config struct. Need to make export
+	// Config exports the config struct. Need to make export
 	// the config struct itself (TODO).
 	Config config
 	isJSON = regexp.MustCompile(".json$")
@@ -50,7 +50,7 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
-// Polls every 60 seconds, kicking off an S3 sync.
+// Poll polls every 60 seconds, kicking off an S3 sync.
 func Poll(bucket, bucketRegion string) {
 	Config = config{
 		bucket:       bucket,
@@ -74,7 +74,7 @@ func Poll(bucket, bucketRegion string) {
 	}()
 }
 
-// Main function for the s3 watcher. It sets up the
+// Sync is the main function for the s3 watcher. It sets up the
 // AWS session, lists all items in the bucket, finally
 // parsing all files and putting them in the kv store.
 func Sync() {
@@ -160,7 +160,7 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 	services := make(map[string]interface{})
 
-	for i, f := range files {
+	for _, f := range files {
 		body, _ := getFile(f, b, svc)
 		pathSplit := strings.Split(f, "/")
 		service := pathSplit[len(pathSplit)-1]
@@ -173,8 +173,6 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 		}
 
 		services[serviceName] = serviceProperties
-
-		i++
 	}
 
 	s, err := injectSecrets(services)

@@ -22,7 +22,7 @@ func init() {
 }
 
 var (
-	// A global for the config struct. The config
+	// Config is a global for the config struct. The config
 	// struct below should just be exported (TODO).
 	Config config
 )
@@ -33,7 +33,7 @@ type config struct {
 	region    string
 }
 
-// Polls every 60 seconds, causing the application
+// Poll polls every 60 seconds, causing the application
 // to parse the files in the supplied directory.
 func Poll(directory, account, region string) {
 	Config = config{
@@ -59,9 +59,8 @@ func Poll(directory, account, region string) {
 	}()
 }
 
-// This function performs the actual work of
-// traversing the supplied directory and adding
-// properties to the kv store.
+// Sync performs the actual work of traversing the supplied
+// directory and adding properties to the kv store.
 func Sync(t time.Time) {
 	absPath, _ := filepath.Abs(Config.directory)
 

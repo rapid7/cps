@@ -14,15 +14,16 @@ import (
 )
 
 var (
-	// If true there are no issues with s3.
+	// Up is a measure of cps's readiness. If true there are no issues with s3.
 	Up bool
 
-	// If false the watcher could not list objects.
-	// There are still probably objects in the kv
-	// store so the service is still considered "Up".
+	// Health is a measure of cps's overall health. If false the watcher
+	// it is likely that the watcher could not list objects. In this case, there
+	// are still probably objects in the kv store so the service is still
+	// considered "Up".
 	Health bool
 
-	// Exports the config struct. Need to make export
+	// Config contains minimal configuration information. Need to export
 	// the config struct itself (TODO).
 	Config       config
 	healthyNodes map[string][]string
@@ -40,7 +41,7 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
-// Polls every 60 seconds, kicking off a consul sync.
+// Poll polls every 60 seconds, kicking off a consul sync.
 func Poll(host string) {
 	Config = config{
 		host: host,
@@ -63,9 +64,8 @@ func Poll(host string) {
 	}()
 }
 
-// This function connects to consul, gets a list of
-// services and their health. Finally, it puts all
-// healthy services into the kv store.
+// Sync connects to consul and gets a list of services and their health.
+// Finally, it puts all healthy services into the kv store.
 func Sync(t time.Time) {
 	log.Print("consul sync begun")
 

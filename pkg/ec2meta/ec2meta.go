@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Contains all aws instance metadata.
+// Instance contains all aws instance metadata.
 type Instance struct {
 	AmiID            string `json:"ami-id"`
 	AvailabilityZone string `json:"availability-zone"`
@@ -58,7 +58,7 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
-// Populates Instance with real or mock data depending
+// Populate populates Instance with real or mock data depending
 // on the environment.
 func Populate(sess *session.Session) Instance {
 	svc := ec2metadata.New(sess)
