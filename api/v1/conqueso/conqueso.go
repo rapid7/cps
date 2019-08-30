@@ -17,8 +17,8 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
-// Handler for /v1/conqueso/{service}. Returns a service's properties
-// in the java property style.
+// GetConquesoProperties is a Handler for /v1/conqueso/{service}.
+// It returns a service's properties in the java property style.
 func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account string, region string) {
 	vars := mux.Vars(r)
 	service := vars["service"]
@@ -68,6 +68,8 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 	w.Write(output.Bytes())
 }
 
-// Empty handler to deal with a bug in the java conqueso client.
+// PostConqueso is an empty handler constructed to deal with a bug in the java
+// conqueso client. It just needs to accept a POST, it does not need to return
+// anything.
 func PostConqueso(w http.ResponseWriter, r *http.Request) {
 }

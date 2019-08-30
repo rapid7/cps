@@ -10,14 +10,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Holds the json response for the /v1/healthz endpoint.
+// Response Holds the json response for the /v1/healthz endpoint.
 type Response struct {
 	Status string `json:"status"`
 	Consul bool   `json:"consul"`
 	S3     bool   `json:"s3"`
 }
 
-// Handler for the /v1/healthz endpoint. It returns detailed
+// GetHealthz is a mux handler for the /v1/healthz endpoint. It returns detailed
 // health information about all dependent services.
 func GetHealthz(w http.ResponseWriter, r *http.Request) {
 	status := "down"

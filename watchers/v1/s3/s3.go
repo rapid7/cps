@@ -25,13 +25,14 @@ import (
 )
 
 var (
-	// If true the s3 service is up.
+	// Up contains the systems availability. If true the s3 service is up.
 	Up bool
 
-	// If false the s3 service most likely can't read
-	// or download from s3. Most likely temporary.read
-	// or download from s3. Most likely temporary.
+	// Health contains the systems readiness. If false the s3 service
+	// most likely can't read or download from s3. Most likely temporary.
 	Health bool
+
+	// Config contains parameters related to S3.
 	Config config
 )
 
@@ -46,10 +47,9 @@ func init() {
 
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	// log.SetLevel(log.DebugLevel)
 }
 
-// Polls every 60 seconds, kicking of an s3 sync.
+// Poll polls every 60 seconds, kicking of an s3 sync.
 func Poll(bucket, bucketRegion string) {
 	Config = config{
 		bucket:       bucket,
@@ -73,7 +73,7 @@ func Poll(bucket, bucketRegion string) {
 	}()
 }
 
-// Sets up an s3 session, parses all files and puts
+// Sync sets up an s3 session, parses all files and puts
 // them into the kv store.
 func Sync() {
 	log.Print("s3 sync begun")
