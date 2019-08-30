@@ -85,7 +85,6 @@ func main() {
 		if fileEnabled {
 			log.Print("File mode is enabled, disabling s3 and consul watchers")
 			s3Enabled = false
-			consulEnabled = false
 			go v2file.Poll(directory, account, region)
 		}
 
