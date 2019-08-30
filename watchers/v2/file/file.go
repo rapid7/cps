@@ -18,6 +18,8 @@ func init() {
 }
 
 var (
+	// Global reference to the config struct. The struct just
+	// needs to be exported (TODO).
 	Config config
 )
 
@@ -27,6 +29,7 @@ type config struct {
 	region    string
 }
 
+// Constructs a poller for files in the directory supplied.
 func Poll(directory, account, region string) {
 	Config = config{
 		directory: directory,
@@ -51,6 +54,8 @@ func Poll(directory, account, region string) {
 	}()
 }
 
+// Traverses all files in Config.directory and writes them
+// to the kv store.
 func Sync(t time.Time) {
 	absPath, _ := filepath.Abs(Config.directory)
 

@@ -14,8 +14,16 @@ import (
 )
 
 var (
-	Up           bool
-	Health       bool
+	// If true there are no issues with s3.
+	Up bool
+
+	// If false the watcher could not list objects.
+	// There are still probably objects in the kv
+	// store so the service is still considered "Up".
+	Health bool
+
+	// Exports the config struct. Need to make export
+	// the config struct itself (TODO).
 	Config       config
 	healthyNodes map[string][]string
 )
@@ -32,6 +40,7 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+// Polls every 60 seconds, kicking off a consul sync.
 func Poll(host string) {
 	Config = config{
 		host: host,
@@ -54,6 +63,9 @@ func Poll(host string) {
 	}()
 }
 
+// This function connects to consul, gets a list of
+// services and their health. Finally, it puts all
+// healthy services into the kv store.
 func Sync(t time.Time) {
 	log.Print("consul sync begun")
 
@@ -78,7 +90,7 @@ func Sync(t time.Time) {
 
 	var mutex = &sync.Mutex{}
 
-	for key, _ := range services {
+	for key := range services {
 		guard <- struct{}{}
 		go func(key string) {
 			defer wg.Done()

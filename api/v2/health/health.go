@@ -9,11 +9,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Holds the json response for /v2/healthz.
 type Response struct {
 	Status string `json:"status"`
 	S3     bool   `json:"s3"`
 }
 
+// Returns basic health status as json.
 func GetHealthz(w http.ResponseWriter, r *http.Request) {
 	status := "down"
 	if s3.Up {

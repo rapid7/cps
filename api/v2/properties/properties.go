@@ -20,10 +20,15 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+// Unused currently but it intented to supply a detailed
+// error message when a GET fails (TODO).
 type Error struct {
 	Status string `json:"status"`
 }
 
+// Handler for the /v2/properties/{service}/* endpoint. It
+// can return all properties for a service or a subset of
+// properties if additional paths are given after {service}.
 func GetProperties(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	scope := strings.Split(vars["scope"], "/")

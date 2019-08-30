@@ -19,10 +19,14 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+// This stuct holds the overall health status of cps
+// and its dependent services
 type Error struct {
 	Status string `json:"status"`
 }
 
+// Handler for the /v1/properties endpoint, returns all
+// properties for a given service.
 func GetProperties(w http.ResponseWriter, r *http.Request, account string, region string) {
 	vars := mux.Vars(r)
 	service := vars["service"]
@@ -70,6 +74,7 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account string, regio
 	}
 }
 
+// Handler for getting a single property.
 func GetProperty(w http.ResponseWriter, r *http.Request, account, region string) {
 	vars := mux.Vars(r)
 	service := vars["service"]

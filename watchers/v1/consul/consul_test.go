@@ -32,7 +32,7 @@ func TestGetServiceHealth(t *testing.T) {
 
 	healthyNodes = make(map[string][]string)
 	var mutex = &sync.Mutex{}
-	for key, _ := range services {
+	for key := range services {
 		getServiceHealth(key, client, qo, mutex)
 	}
 

@@ -25,7 +25,12 @@ import (
 )
 
 var (
-	Up     bool
+	// If true the s3 service is up.
+	Up bool
+
+	// If false the s3 service most likely can't read
+	// or download from s3. Most likely temporary.read
+	// or download from s3. Most likely temporary.
 	Health bool
 	Config config
 )
@@ -44,6 +49,7 @@ func init() {
 	// log.SetLevel(log.DebugLevel)
 }
 
+// Polls every 60 seconds, kicking of an s3 sync.
 func Poll(bucket, bucketRegion string) {
 	Config = config{
 		bucket:       bucket,
@@ -67,6 +73,8 @@ func Poll(bucket, bucketRegion string) {
 	}()
 }
 
+// Sets up an s3 session, parses all files and puts
+// them into the kv store.
 func Sync() {
 	log.Print("s3 sync begun")
 
@@ -152,11 +160,10 @@ func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 				log.Errorf("Download canceled due to timeout %v\n", err)
 				Health = false
 				return
-			} else {
-				log.Errorf("Failed to download object: %v", err)
-				Health = false
-				return
 			}
+			log.Errorf("Failed to download object: %v", err)
+			Health = false
+			return
 		}
 
 		body, err := ioutil.ReadAll(result.Body)

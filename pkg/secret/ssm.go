@@ -17,6 +17,9 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+// This function parses all properties looking for an
+// $ssm key. When found, it gets the ssm parameter store
+// secret and writes the key and secret to the kv store.
 func GetSSMSecret(k string, v []byte) (string, error) {
 	var j map[string]interface{}
 	err := json.Unmarshal(v, &j)

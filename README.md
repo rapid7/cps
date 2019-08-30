@@ -1,5 +1,7 @@
 # CPS - Centralized Property Service
 
+[![Go Report](https://goreportcard.com/badge/github.com/rapid7/cps)](https://goreportcard.com/badge/github.com/rapid7/cps)
+
 CPS is a centralized dynamic property service. It serves up the precomputed properties for a service as well as dynamic consul properties in the form of `conqueso.service.ips=`. It also supports AWS SSM Parameter Store SecureStrings.
 
 See [cps-property-generator](https://github.com/rapid7/cps-property-generator) for generating json property files and uploading them to s3.
