@@ -10,16 +10,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Struct wrapper for all health data.
 type Health struct {
 	Status  int           `json:"status"`
 	Plugins HealthPlugins `json:"plugins"`
 }
 
+// Subset of the Health struct, it contains
+// health information for various components.
 type HealthPlugins struct {
 	Consul bool `json:"consul"`
 	S3     bool `json:"s3"`
 }
 
+// Handler for the health endpoint. Checks health for
+// various components and returns the results as json.
 func GetHealth(w http.ResponseWriter, r *http.Request) {
 	var status int
 	if s3.Health == true && consul.Health == true {

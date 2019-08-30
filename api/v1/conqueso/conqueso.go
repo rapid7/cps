@@ -17,6 +17,8 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+// Handler for /v1/conqueso/{service}. Returns a service's properties
+// in the java property style.
 func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account string, region string) {
 	vars := mux.Vars(r)
 	service := vars["service"]
@@ -66,5 +68,6 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 	w.Write(output.Bytes())
 }
 
+// Empty handler to deal with a bug in the java conqueso client.
 func PostConqueso(w http.ResponseWriter, r *http.Request) {
 }

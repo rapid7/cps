@@ -17,8 +17,8 @@ func TestListBucket(t *testing.T) {
 	svc := new(mocks.S3API)
 	svc.On("ListObjects", mock.AnythingOfType("*s3.ListObjectsInput")).Return(&s3.ListObjectsOutput{
 		Contents: []*s3.Object{
-			&s3.Object{Key: aws.String("1234567890/us-east-1/service-one.json")},
-			&s3.Object{Key: aws.String("1234567890/us-east-1/service-two.json")},
+			{Key: aws.String("1234567890/us-east-1/service-one.json")},
+			{Key: aws.String("1234567890/us-east-1/service-two.json")},
 		},
 	}, nil)
 
@@ -34,9 +34,9 @@ func TestParseAllFiles(t *testing.T) {
 
 	o := &s3.ListObjectsOutput{
 		Contents: []*s3.Object{
-			&s3.Object{Key: aws.String("1234567890/us-east-1/service-one.json")},
-			&s3.Object{Key: aws.String("1234567890/us-east-1/service-two.json")},
-			&s3.Object{Key: aws.String("1234567890/us-east-1/.not-a-service-file")},
+			{Key: aws.String("1234567890/us-east-1/service-one.json")},
+			{Key: aws.String("1234567890/us-east-1/service-two.json")},
+			{Key: aws.String("1234567890/us-east-1/.not-a-service-file")},
 		},
 	}
 

@@ -19,8 +19,9 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+// Decrypts a KMS secret from its ciphertext.
+// Broken. Do not use. Look away.
 func Decrypt(s []byte) (string, error) {
-	// TODO: Get region from config
 	region := "us-east-1"
 
 	var j map[string]interface{}

@@ -26,6 +26,7 @@ var (
 	metadata ec2meta.Instance
 )
 
+// Source locations (s3, file, consul, etc).
 type Source struct {
 	Name       string `yaml:"name"`
 	Type       string `yaml:"type"`
@@ -34,11 +35,14 @@ type Source struct {
 	} `yaml:"parameters"`
 }
 
+// The top level struct which the index is mapped to.
 type Index struct {
 	Version float64  `yaml:"version"`
 	Sources []Source `yaml:"sources"`
 }
 
+// This function grabs the index from s3 and returns
+// all paths.
 func ParseIndex(b, region string) ([]string, error) {
 	jsonBytes, err := getIndexFromS3(b, region)
 	if err != nil {

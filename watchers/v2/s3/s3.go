@@ -25,8 +25,16 @@ import (
 )
 
 var (
-	Up     bool
+	// If true there are no issues with s3.
+	Up bool
+
+	// If false the watcher could not list objects.
+	// There are still probably objects in the kv
+	// store so the service is still considered "Up".
 	Health bool
+
+	// Exports the config struct. Need to make export
+	// the config struct itself (TODO).
 	Config config
 	isJSON = regexp.MustCompile(".json$")
 	mu     = sync.Mutex{}
@@ -42,6 +50,7 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+// Polls every 60 seconds, kicking off an S3 sync.
 func Poll(bucket, bucketRegion string) {
 	Config = config{
 		bucket:       bucket,
@@ -65,6 +74,9 @@ func Poll(bucket, bucketRegion string) {
 	}()
 }
 
+// Main function for the s3 watcher. It sets up the
+// AWS session, lists all items in the bucket, finally
+// parsing all files and putting them in the kv store.
 func Sync() {
 	log.Print("s3 sync begun")
 
@@ -256,11 +268,11 @@ func getFile(k, b string, svc s3iface.S3API) ([]byte, error) {
 				log.Errorf("Download canceled due to timeout %v\n", err)
 				Health = false
 				return nil, err
-			} else {
-				log.Errorf("Failed to download object: %v", err)
-				Health = false
-				return nil, err
 			}
+
+			log.Errorf("Failed to download object: %v", err)
+			Health = false
+			return nil, err
 		}
 
 		body, err = ioutil.ReadAll(result.Body)
