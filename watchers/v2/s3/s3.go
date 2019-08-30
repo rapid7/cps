@@ -160,7 +160,7 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 	services := make(map[string]interface{})
 
-	for i, f := range files {
+	for _, f := range files {
 		body, _ := getFile(f, b, svc)
 		pathSplit := strings.Split(f, "/")
 		service := pathSplit[len(pathSplit)-1]
@@ -173,8 +173,6 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
 		}
 
 		services[serviceName] = serviceProperties
-
-		i++
 	}
 
 	s, err := injectSecrets(services)
