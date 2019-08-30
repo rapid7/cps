@@ -20,7 +20,7 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
-// Error is unused currently but it intented to supply a detailed
+// Error is unused currently but it intended to supply a detailed
 // error message when a GET fails (TODO).
 type Error struct {
 	Status string `json:"status"`
