@@ -2,20 +2,14 @@ package file
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/rapid7/cps/pkg/kv"
-
-	log "github.com/sirupsen/logrus"
 )
-
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-}
 
 var (
 	// Config is a global reference to the config struct. The struct just
@@ -30,14 +24,14 @@ type config struct {
 }
 
 // Poll constructs a poller for files in the directory supplied.
-func Poll(directory, account, region string) {
+func Poll(directory, account, region string, log *zap.Logger) {
 	Config = config{
 		directory: directory,
 		account:   account,
 		region:    region,
 	}
 
-	Sync(time.Now())
+	Sync(time.Now(), log)
 
 	ticker := time.NewTicker(60 * time.Second)
 	quit := make(chan struct{})
@@ -45,7 +39,7 @@ func Poll(directory, account, region string) {
 		for {
 			select {
 			case <-ticker.C:
-				Sync(time.Now())
+				Sync(time.Now(), log)
 			case <-quit:
 				ticker.Stop()
 				return
@@ -56,12 +50,16 @@ func Poll(directory, account, region string) {
 
 // Sync traverses all files in Config.directory and writes them
 // to the kv store.
-func Sync(t time.Time) {
+func Sync(t time.Time, log *zap.Logger) {
 	absPath, _ := filepath.Abs(Config.directory)
 
 	files, err := ioutil.ReadDir(absPath)
 	if err != nil {
-		log.Errorf("Error reading directory: %v", err)
+		log.Error("Error reading directory",
+			zap.Error(err),
+			zap.String("static_file_dir", absPath),
+		)
+
 		return
 	}
 
@@ -73,13 +71,20 @@ func Sync(t time.Time) {
 
 			jsonBytes, err := ioutil.ReadFile(fullPath)
 			if err != nil {
-				log.Error(err)
+				log.Error("Failed to read json file",
+					zap.Error(err),
+					zap.String("filename", fullPath),
+				)
+
 				return
 			}
 
 			kv.WriteProperty(shortPath, jsonBytes)
 		} else {
-			log.Errorf("File does not have the json extension: %v", fn)
+			log.Error("File does not have the json extension",
+				zap.String("filename", fn),
+			)
+
 			return
 		}
 	}

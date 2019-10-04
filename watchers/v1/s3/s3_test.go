@@ -10,10 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/rapid7/cps/logger"
 	"github.com/rapid7/cps/watchers/v1/s3/mocks"
 )
 
 func TestListBucket(t *testing.T) {
+	log := logger.BuildLogger()
+
 	svc := new(mocks.S3API)
 	svc.On("ListObjects", mock.AnythingOfType("*s3.ListObjectsInput")).Return(&s3.ListObjectsOutput{
 		Contents: []*s3.Object{
@@ -22,7 +25,7 @@ func TestListBucket(t *testing.T) {
 		},
 	}, nil)
 
-	b, err := listBucket("test.bucket", svc)
+	b, err := listBucket("test.bucket", svc, log)
 	assert.Nil(t, err, "Expected no error")
 	assert.Len(t, b.Contents, 2, "Expected two keys")
 	assert.Equal(t, aws.String("1234567890/us-east-1/service-one.json"), b.Contents[0].Key, "Expected service-one")
@@ -30,6 +33,8 @@ func TestListBucket(t *testing.T) {
 }
 
 func TestParseAllFiles(t *testing.T) {
+	log := logger.BuildLogger()
+
 	svc := new(mocks.S3API)
 
 	o := &s3.ListObjectsOutput{
@@ -50,7 +55,7 @@ func TestParseAllFiles(t *testing.T) {
 		Body: body,
 	}, nil)
 
-	err := parseAllFiles(o, "test.bucket", svc)
+	err := parseAllFiles(o, "test.bucket", svc, log)
 
 	assert.Nil(t, err, "Expected no error")
 }
