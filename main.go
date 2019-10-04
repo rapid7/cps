@@ -76,7 +76,7 @@ func main() {
 
 	if apiVersion == 2 {
 		router.HandleFunc("/v2/properties/{scope:.*}", func(w http.ResponseWriter, r *http.Request) {
-			v2props.GetProperties(w, r)
+			v2props.GetProperties(w, r, log)
 		}).Methods("GET")
 
 		if fileEnabled {
@@ -91,7 +91,9 @@ func main() {
 			go v2s3.Poll(bucket, bucketRegion, log)
 		}
 
-		router.HandleFunc("/v2/healthz", v2health.GetHealthz).Methods("GET")
+		router.HandleFunc("/v2/healthz", func(w http.ResponseWriter, r *http.Request) {
+			v2health.GetHealthz(w, r, log)
+		}).Methods("GET")
 
 	} else {
 		if fileEnabled {
@@ -114,24 +116,28 @@ func main() {
 		}
 
 		router.HandleFunc("/v1/properties/{service}", func(w http.ResponseWriter, r *http.Request) {
-			props.GetProperties(w, r, account, region)
+			props.GetProperties(w, r, account, region, log)
 		}).Methods("GET")
 
 		router.HandleFunc("/v1/conqueso/{service}", func(w http.ResponseWriter, r *http.Request) {
-			cq.GetConquesoProperties(w, r, account, region)
+			cq.GetConquesoProperties(w, r, account, region, log)
 		}).Methods("GET")
 
 		router.HandleFunc("/v1/properties/{service}/{property}", func(w http.ResponseWriter, r *http.Request) {
-			props.GetProperty(w, r, account, region)
+			props.GetProperty(w, r, account, region, log)
 		}).Methods("GET")
 
 		router.HandleFunc("/v1/conqueso/{service}", cq.PostConqueso).Methods("POST")
 
 		// Health returns detailed information about CPS health.
-		router.HandleFunc("/v1/health", health.GetHealth).Methods("GET")
-		// Healthz returns only basic health.
-		router.HandleFunc("/v1/healthz", health.GetHealthz).Methods("GET")
+		router.HandleFunc("/v1/health", func(w http.ResponseWriter, r *http.Request) {
+			health.GetHealth(w, r, log)
+		}).Methods("GET")
 
+		// Healthz returns only basic health.
+		router.HandleFunc("/v1/healthz", func(w http.ResponseWriter, r *http.Request) {
+			health.GetHealthz(w, r, log)
+		}).Methods("GET")
 	}
 
 	// Serve it.

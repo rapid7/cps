@@ -2,8 +2,6 @@ package kv
 
 import (
 	"sync"
-
-	log "github.com/sirupsen/logrus"
 )
 
 /**
@@ -25,7 +23,6 @@ func WriteProperty(k string, v interface{}) error {
 // DeleteProperty deletes a property from the Cache.
 func DeleteProperty(k interface{}) error {
 	Cache.Delete(k)
-	log.Printf("Deleted key: %v", k)
 	return nil
 }
 
