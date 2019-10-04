@@ -2,7 +2,6 @@ package s3
 
 import (
 	"io/ioutil"
-	"os"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -17,8 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/buger/jsonparser"
-
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/pkg/kv"
 	"github.com/rapid7/cps/pkg/secret"
@@ -44,19 +42,16 @@ type config struct {
 func init() {
 	Health = false
 	Up = false
-
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
 }
 
 // Poll polls every 60 seconds, kicking of an s3 sync.
-func Poll(bucket, bucketRegion string) {
+func Poll(bucket, bucketRegion string, log *zap.Logger) {
 	Config = config{
 		bucket:       bucket,
 		bucketRegion: bucketRegion,
 	}
 
-	Sync()
+	Sync(time.Now(), log)
 
 	ticker := time.NewTicker(60 * time.Second)
 	quit := make(chan struct{})
@@ -64,7 +59,7 @@ func Poll(bucket, bucketRegion string) {
 		for {
 			select {
 			case <-ticker.C:
-				Sync()
+				Sync(time.Now(), log)
 			case <-quit:
 				ticker.Stop()
 				return
@@ -75,19 +70,19 @@ func Poll(bucket, bucketRegion string) {
 
 // Sync sets up an s3 session, parses all files and puts
 // them into the kv store.
-func Sync() {
-	log.Print("s3 sync begun")
+func Sync(t time.Time, log *zap.Logger) {
+	log.Info("S3 sync begun")
 
 	bucket := Config.bucket
 	region := Config.bucketRegion
 
 	svc := setUpAwsSession(region)
-	resp, err := listBucket(bucket, svc)
+	resp, err := listBucket(bucket, svc, log)
 	if err != nil {
 		return
 	}
 
-	err = parseAllFiles(resp, bucket, svc)
+	err = parseAllFiles(resp, bucket, svc, log)
 	if err != nil {
 		return
 	}
@@ -95,7 +90,7 @@ func Sync() {
 	Up = true
 	Health = true
 
-	log.Print("S3 sync finished")
+	log.Info("S3 sync finished")
 }
 
 func setUpAwsSession(region string) s3iface.S3API {
@@ -110,22 +105,26 @@ func setUpAwsSession(region string) s3iface.S3API {
 	return svc
 }
 
-func listBucket(bucket string, svc s3iface.S3API) (*s3.ListObjectsOutput, error) {
+func listBucket(bucket string, svc s3iface.S3API, log *zap.Logger) (*s3.ListObjectsOutput, error) {
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 	}
 
 	resp, err := svc.ListObjects(params)
 	if err != nil {
-		log.Errorf("Error listing s3 objects %v:", err)
+		log.Error("Error listing s3 objects",
+			zap.Error(err),
+		)
+
 		Health = false
+
 		return nil, err
 	}
 
 	return resp, nil
 }
 
-func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API) error {
+func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API, log *zap.Logger) error {
 	var wg sync.WaitGroup
 	wg.Add(len(resp.Contents))
 
@@ -136,7 +135,7 @@ func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API)
 		guard <- struct{}{}
 		go func(key *s3.Object) {
 			defer wg.Done()
-			parsePropertyFile(*key.Key, bucket, svc)
+			parsePropertyFile(*key.Key, bucket, svc, log)
 			<-guard
 		}(key)
 	}
@@ -146,7 +145,7 @@ func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API)
 	return nil
 }
 
-func parsePropertyFile(k string, b string, svc s3iface.S3API) {
+func parsePropertyFile(k string, b string, svc s3iface.S3API, log *zap.Logger) {
 	isJSON, _ := regexp.Compile(".json$")
 
 	if isJSON.MatchString(k) {
@@ -157,19 +156,36 @@ func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
-				log.Errorf("Download canceled due to timeout %v\n", err)
+				log.Error("Download canceled due to timeout",
+					zap.Error(err),
+				)
+
 				Health = false
+
 				return
 			}
-			log.Errorf("Failed to download object: %v", err)
+
+			log.Error("Failed to download object",
+				zap.Error(err),
+				zap.String("bucket", b),
+				zap.String("object", k),
+			)
+
 			Health = false
+
 			return
 		}
 
 		body, err := ioutil.ReadAll(result.Body)
 		if err != nil {
-			log.Errorf("Failure to read body: %v\n", err)
+			log.Error("Failed to read body",
+				zap.Error(err),
+				zap.String("bucket", b),
+				zap.String("object", k),
+			)
+
 			Health = false
+
 			return
 		}
 
@@ -180,10 +196,8 @@ func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 		jsonparser.ObjectEach(body, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
 			switch dataTypeString := dataType.String(); dataTypeString {
 			case "string":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				properties[string(key)] = string(value)
 			case "number":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				var v interface{}
 				if strings.Contains(string(value), ".") {
 					v, _ = strconv.ParseFloat(string(value), 64)
@@ -192,14 +206,11 @@ func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 				}
 				properties[string(key)] = v
 			case "boolean":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				v, _ := strconv.ParseBool(string(value))
 				properties[string(key)] = v
 			case "null":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				properties[string(key)] = ""
 			case "object":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				s, err := secret.GetSSMSecret(string(key), value)
 				if err != nil {
 					handleSecretFailure(err, properties, string(key), path)
@@ -207,7 +218,11 @@ func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 					properties[string(key)] = s
 				}
 			default:
-				log.Errorf("Service: %v | Key: %v | Value %v | Type: %v | Unsupported! %v:%T", k, string(key), string(value), dataTypeString, dataTypeString, dataTypeString)
+				log.Error("Unsupported type!",
+					zap.String("key", string(key)),
+					zap.String("value", string(value)),
+					zap.String("type", dataTypeString),
+				)
 			}
 
 			return nil
@@ -216,7 +231,9 @@ func parsePropertyFile(k string, b string, svc s3iface.S3API) {
 		kv.WriteProperty(path, properties)
 
 	} else {
-		log.Printf("Skipping: %v.\n", k)
+		log.Info("Skipping file without json extension",
+			zap.String("file", k),
+		)
 	}
 }
 

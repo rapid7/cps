@@ -3,18 +3,19 @@ package secret
 import (
 	"encoding/json"
 	"errors"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"go.uber.org/zap"
+)
 
-	log "github.com/sirupsen/logrus"
+var (
+	log *zap.Logger
 )
 
 func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
+	log, _ = zap.NewProduction()
 }
 
 // GetSSMSecret parses all properties looking for an
@@ -24,7 +25,10 @@ func GetSSMSecret(k string, v []byte) (string, error) {
 	var j map[string]interface{}
 	err := json.Unmarshal(v, &j)
 	if err != nil {
-		log.Errorf("Failed to unmarshall SSM object: %v", err)
+		log.Error("Failed to unmarshall SSM object",
+			zap.Error(err),
+		)
+
 		return "", err
 	}
 
@@ -56,7 +60,11 @@ func GetSSMSecret(k string, v []byte) (string, error) {
 
 		p, err := svc.GetParameter(params)
 		if err != nil {
-			log.Errorf("Error getting SSM parameter %v: %v", k, err)
+			log.Error("Error getting SSM parameter",
+				zap.Error(err),
+				zap.String("key", k),
+			)
+
 			return "", err
 		}
 
@@ -86,7 +94,11 @@ func GetSSMSecret(k string, v []byte) (string, error) {
 
 	p, err := svc.GetParameter(params)
 	if err != nil {
-		log.Errorf("Error getting SSM parameter %v: %v", k, err)
+		log.Error("Error getting SSM parameter",
+			zap.Error(err),
+			zap.String("key", k),
+		)
+
 		return "", err
 	}
 

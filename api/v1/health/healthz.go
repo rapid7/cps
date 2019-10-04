@@ -6,8 +6,7 @@ import (
 
 	"github.com/rapid7/cps/watchers/v1/consul"
 	"github.com/rapid7/cps/watchers/v1/s3"
-
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // Response Holds the json response for the /v1/healthz endpoint.
@@ -19,7 +18,7 @@ type Response struct {
 
 // GetHealthz is a mux handler for the /v1/healthz endpoint. It returns detailed
 // health information about all dependent services.
-func GetHealthz(w http.ResponseWriter, r *http.Request) {
+func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	status := "down"
 	if s3.Up == true && consul.Up == true {
 		status = "up"
@@ -30,8 +29,11 @@ func GetHealthz(w http.ResponseWriter, r *http.Request) {
 		Consul: consul.Up,
 		S3:     s3.Up,
 	})
+
 	if err != nil {
-		log.Error(err)
+		log.Error("Failed to marshal json",
+			zap.Error(err),
+		)
 	}
 
 	if status == "down" {

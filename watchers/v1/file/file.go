@@ -2,24 +2,17 @@ package file
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/buger/jsonparser"
+	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/pkg/kv"
 	"github.com/rapid7/cps/pkg/secret"
-
-	log "github.com/sirupsen/logrus"
 )
-
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-}
 
 var (
 	// Config is a global for the config struct. The config
@@ -35,14 +28,14 @@ type config struct {
 
 // Poll polls every 60 seconds, causing the application
 // to parse the files in the supplied directory.
-func Poll(directory, account, region string) {
+func Poll(directory, account, region string, log *zap.Logger) {
 	Config = config{
 		directory: directory,
 		account:   account,
 		region:    region,
 	}
 
-	Sync(time.Now())
+	Sync(time.Now(), log)
 
 	ticker := time.NewTicker(60 * time.Second)
 	quit := make(chan struct{})
@@ -50,7 +43,7 @@ func Poll(directory, account, region string) {
 		for {
 			select {
 			case <-ticker.C:
-				Sync(time.Now())
+				Sync(time.Now(), log)
 			case <-quit:
 				ticker.Stop()
 				return
@@ -61,12 +54,17 @@ func Poll(directory, account, region string) {
 
 // Sync performs the actual work of traversing the supplied
 // directory and adding properties to the kv store.
-func Sync(t time.Time) {
+func Sync(t time.Time, log *zap.Logger) {
 	absPath, _ := filepath.Abs(Config.directory)
 
 	files, err := ioutil.ReadDir(absPath)
 	if err != nil {
-		log.Errorf("Error reading directory: %v", err)
+		log.Error("Error reading directory",
+			zap.Error(err),
+			zap.String("directory", absPath),
+		)
+
+		return
 	}
 
 	for _, f := range files {
@@ -82,10 +80,8 @@ func Sync(t time.Time) {
 		jsonparser.ObjectEach(j, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
 			switch dataTypeString := dataType.String(); dataTypeString {
 			case "string":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				properties[string(key)] = string(value)
 			case "number":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				var v interface{}
 				if strings.Contains(string(value), ".") {
 					v, _ = strconv.ParseFloat(string(value), 64)
@@ -94,22 +90,27 @@ func Sync(t time.Time) {
 				}
 				properties[string(key)] = v
 			case "boolean":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				v, _ := strconv.ParseBool(string(value))
 				properties[string(key)] = v
 			case "null":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				properties[string(key)] = ""
 			case "object":
-				log.Debugf("Wrote %s/%s:(%s)=%s", path, string(key), dataTypeString, string(value))
 				s, err := secret.GetSSMSecret(string(key), value)
 				if err != nil {
-					log.Error(err)
+					log.Error("Failed to get SSM secret",
+						zap.Error(err),
+					)
+
 					return err
 				}
 				properties[string(key)] = s
 			default:
-				log.Errorf("Service: %v | Key: %v | Value %v | Type: %v | Unsupported! %v:%T", shortPath, string(key), string(value), dataTypeString, dataTypeString, dataTypeString)
+				log.Error("Unsupported type!",
+					zap.String("service", shortPath),
+					zap.String("key", string(key)),
+					zap.String("value", string(value)),
+					zap.String("type", dataTypeString),
+				)
 			}
 
 			return nil

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rapid7/cps/watchers/v2/s3"
+	"go.uber.org/zap"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/rapid7/cps/watchers/v2/s3"
 )
 
 // Response holds the json response for /v2/healthz.
@@ -16,7 +16,7 @@ type Response struct {
 }
 
 // GetHealthz returns the basic health status as json.
-func GetHealthz(w http.ResponseWriter, r *http.Request) {
+func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	status := "down"
 	if s3.Up {
 		status = "up"
@@ -26,8 +26,11 @@ func GetHealthz(w http.ResponseWriter, r *http.Request) {
 		Status: status,
 		S3:     s3.Up,
 	})
+
 	if err != nil {
-		log.Error(err)
+		log.Error("Failed to unmarshal json",
+			zap.Error(err),
+		)
 	}
 
 	if status == "down" {

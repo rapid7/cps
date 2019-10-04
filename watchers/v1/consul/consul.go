@@ -1,14 +1,12 @@
 package consul
 
 import (
-	"os"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/consul/api"
-
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/pkg/kv"
 )
@@ -36,18 +34,15 @@ type config struct {
 func init() {
 	Health = false
 	Up = false
-
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
 }
 
 // Poll polls every 60 seconds, kicking off a consul sync.
-func Poll(host string) {
+func Poll(host string, log *zap.Logger) {
 	Config = config{
 		host: host,
 	}
 
-	Sync(time.Now())
+	Sync(time.Now(), log)
 
 	ticker := time.NewTicker(60 * time.Second)
 	quit := make(chan struct{})
@@ -55,7 +50,7 @@ func Poll(host string) {
 		for {
 			select {
 			case <-ticker.C:
-				Sync(time.Now())
+				Sync(time.Now(), log)
 			case <-quit:
 				ticker.Stop()
 				return
@@ -66,16 +61,16 @@ func Poll(host string) {
 
 // Sync connects to consul and gets a list of services and their health.
 // Finally, it puts all healthy services into the kv store.
-func Sync(t time.Time) {
-	log.Print("consul sync begun")
+func Sync(t time.Time, log *zap.Logger) {
+	log.Info("Consul sync begun")
 
 	consulHost := Config.host
-	client, err := setUpConsulClient(consulHost)
+	client, err := setUpConsulClient(consulHost, log)
 	if err != nil {
 		return
 	}
 
-	services, qo, err := getServices(client)
+	services, qo, err := getServices(client, log)
 	if err != nil {
 		return
 	}
@@ -94,7 +89,7 @@ func Sync(t time.Time) {
 		guard <- struct{}{}
 		go func(key string) {
 			defer wg.Done()
-			getServiceHealth(key, client, qo, mutex)
+			getServiceHealth(key, client, qo, mutex, log)
 			<-guard
 		}(key)
 	}
@@ -106,29 +101,36 @@ func Sync(t time.Time) {
 	Health = true
 	Up = true
 
-	log.Print("Consul sync is finished")
+	log.Info("Consul sync is finished")
 }
 
-func setUpConsulClient(consulHost string) (*api.Client, error) {
+func setUpConsulClient(consulHost string, log *zap.Logger) (*api.Client, error) {
 	consulConfig := api.DefaultConfig()
 	consulConfig.Address = consulHost
 	consulConfig.Scheme = "http"
 
 	client, err := api.NewClient(consulConfig)
 	if err != nil {
-		log.Errorf("Consul error: %v\n", err)
+		log.Error("Consul error",
+			zap.Error(err),
+			zap.String("consul_host", consulHost),
+		)
+
 		return nil, err
 	}
 
 	return client, nil
 }
 
-func getServices(client *api.Client) (map[string][]string, api.QueryOptions, error) {
+func getServices(client *api.Client, log *zap.Logger) (map[string][]string, api.QueryOptions, error) {
 	catalog := client.Catalog()
 	qo := api.QueryOptions{}
 	services, _, err := catalog.Services(&qo)
 	if err != nil {
-		log.Errorf("Catalog/services error: %v", err)
+		log.Error("Consul Catalog/services error failed",
+			zap.Error(err),
+		)
+
 		return nil, qo, err
 	}
 
@@ -139,11 +141,15 @@ func writeProperties() {
 	kv.WriteProperty("consul", healthyNodes)
 }
 
-func getServiceHealth(key string, client *api.Client, qo api.QueryOptions, m *sync.Mutex) {
+func getServiceHealth(key string, client *api.Client, qo api.QueryOptions, m *sync.Mutex, log *zap.Logger) {
 	h := client.Health()
 	sh, _, err := h.Service(key, "", true, &qo)
 	if err != nil {
-		log.Errorf("Failed to find service: %v", err)
+		log.Error("Failed to find service",
+			zap.Error(err),
+			zap.String("service", key),
+		)
+
 		return
 	}
 
@@ -162,7 +168,10 @@ func getServiceHealth(key string, client *api.Client, qo api.QueryOptions, m *sy
 			healthyNodes[key] = append(healthyNodes[key], ip)
 			m.Unlock()
 		} else {
-			log.Printf("Service %v is %v skipping!", key, as)
+			log.Info("Skipping service!",
+				zap.String("service", key),
+				zap.String("aggregated_status", as),
+			)
 		}
 	}
 }

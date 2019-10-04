@@ -4,21 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/rapid7/cps/pkg/kv"
+	"go.uber.org/zap"
 
 	mux "github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 	gjson "github.com/tidwall/gjson"
 )
-
-func init() {
-	// logging
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-}
 
 // Error is unused currently but it intended to supply a detailed
 // error message when a GET fails (TODO).
@@ -29,7 +22,7 @@ type Error struct {
 // GetProperties is a handler for the /v2/properties/{service}/* endpoint. It
 // can return all properties for a service or a subset of properties if
 // additional paths are given after {service}.
-func GetProperties(w http.ResponseWriter, r *http.Request) {
+func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	vars := mux.Vars(r)
 	scope := strings.Split(vars["scope"], "/")
 	service := scope[0]
@@ -45,7 +38,9 @@ func GetProperties(w http.ResponseWriter, r *http.Request) {
 
 	b := new(bytes.Buffer)
 	if err := json.Compact(b, jb); err != nil {
-		log.Error(err)
+		log.Error("Failed to compact json",
+			zap.Error(err),
+		)
 	}
 
 	j := []byte(b.Bytes())

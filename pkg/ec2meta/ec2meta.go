@@ -8,8 +8,6 @@ import (
 	// "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Instance contains all aws instance metadata.
@@ -51,11 +49,6 @@ type Instance struct {
 	AutoScalingGroup string `json:"auto-scaling-group"`
 	Tags             struct {
 	} `json:"tags"`
-}
-
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
 }
 
 // Populate populates Instance with real or mock data depending

@@ -7,11 +7,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/rapid7/cps/logger"
 	"github.com/rapid7/cps/watchers/v1/consul"
 	"github.com/rapid7/cps/watchers/v1/s3"
 )
 
 func TestGetHealthz(t *testing.T) {
+	log := logger.BuildLogger()
+
 	consul.Up = false
 	s3.Up = false
 
@@ -21,7 +24,9 @@ func TestGetHealthz(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetHealthz)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		GetHealthz(w, r, log)
+	})
 
 	handler.ServeHTTP(rr, req)
 
@@ -36,7 +41,9 @@ func TestGetHealthz(t *testing.T) {
 	s3.Up = true
 
 	rr = httptest.NewRecorder()
-	handler = http.HandlerFunc(GetHealthz)
+	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		GetHealthz(w, r, log)
+	})
 
 	handler.ServeHTTP(rr, req)
 

@@ -15,9 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/rapid7/cps/pkg/index"
 	"github.com/rapid7/cps/pkg/kv"
@@ -38,8 +36,6 @@ var (
 	Config config
 	isJSON = regexp.MustCompile(".json$")
 	mu     = sync.Mutex{}
-
-	log *zap.Logger
 )
 
 type config struct {
@@ -47,35 +43,14 @@ type config struct {
 	bucketRegion string
 }
 
-func init() {
-	log, _ = zap.Config{
-		Encoding:         "json",
-		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
-		OutputPaths:      []string{"stderr"},
-		ErrorOutputPaths: []string{"stderr"},
-		EncoderConfig: zapcore.EncoderConfig{
-			MessageKey: "message",
-
-			LevelKey:    "level",
-			EncodeLevel: zapcore.CapitalLevelEncoder,
-
-			TimeKey:    "time",
-			EncodeTime: zapcore.ISO8601TimeEncoder,
-
-			CallerKey:    "caller",
-			EncodeCaller: zapcore.ShortCallerEncoder,
-		},
-	}.Build()
-}
-
 // Poll polls every 60 seconds, kicking off an S3 sync.
-func Poll(bucket, bucketRegion string) {
+func Poll(bucket, bucketRegion string, log *zap.Logger) {
 	Config = config{
 		bucket:       bucket,
 		bucketRegion: bucketRegion,
 	}
 
-	Sync()
+	Sync(time.Now(), log)
 
 	ticker := time.NewTicker(60 * time.Second)
 	quit := make(chan struct{})
@@ -83,7 +58,7 @@ func Poll(bucket, bucketRegion string) {
 		for {
 			select {
 			case <-ticker.C:
-				Sync()
+				Sync(time.Now(), log)
 			case <-quit:
 				ticker.Stop()
 				return
@@ -95,14 +70,14 @@ func Poll(bucket, bucketRegion string) {
 // Sync is the main function for the s3 watcher. It sets up the
 // AWS session, lists all items in the bucket, finally
 // parsing all files and putting them in the kv store.
-func Sync() {
-	log.Info("s3 sync begun")
+func Sync(t time.Time, log *zap.Logger) {
+	log.Info("S3 sync begun")
 
 	bucket := Config.bucket
 	region := Config.bucketRegion
 
 	svc := setUpAwsSession(region)
-	resp, err := listBucket(bucket, region, svc)
+	resp, err := listBucket(bucket, region, svc, log)
 	if err != nil {
 		log.Error("Failed to list bucket",
 			zap.Error(err),
@@ -113,7 +88,7 @@ func Sync() {
 		return
 	}
 
-	if err := parseAllFiles(resp, bucket, svc); err != nil {
+	if err := parseAllFiles(resp, bucket, svc, log); err != nil {
 		return
 	}
 
@@ -137,7 +112,7 @@ func setUpAwsSession(region string) s3iface.S3API {
 	return svc
 }
 
-func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutput, error) {
+func listBucket(bucket, region string, svc s3iface.S3API, log *zap.Logger) ([]*s3.ListObjectsOutput, error) {
 	i, err := index.ParseIndex(bucket, region)
 	if err != nil {
 		return nil, err
@@ -153,7 +128,7 @@ func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutp
 
 		resp, err := svc.ListObjects(params)
 		if err != nil {
-			log.Error("Error listing s3 objects:",
+			log.Error("Error listing s3 objects",
 				zap.Error(err),
 				zap.String("bucket", bucket),
 				zap.String("region", region),
@@ -171,7 +146,7 @@ func listBucket(bucket, region string, svc s3iface.S3API) ([]*s3.ListObjectsOutp
 	return responses, nil
 }
 
-func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3API) error {
+func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3API, log *zap.Logger) error {
 	var files []string
 
 	for _, object := range resp {
@@ -180,18 +155,18 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 		}
 	}
 
-	if err := getPropertyFiles(files, bucket, svc); err != nil {
+	if err := getPropertyFiles(files, bucket, svc, log); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func getPropertyFiles(files []string, b string, svc s3iface.S3API) error {
+func getPropertyFiles(files []string, b string, svc s3iface.S3API, log *zap.Logger) error {
 	services := make(map[string]interface{})
 
 	for _, f := range files {
-		body, _ := getFile(f, b, svc)
+		body, _ := getFile(f, b, svc, log)
 		pathSplit := strings.Split(f, "/")
 		service := pathSplit[len(pathSplit)-1]
 		serviceName := service[0 : len(service)-5]
@@ -245,11 +220,6 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 						secretBytes, _ := json.Marshal(d.MapIndex(k).Interface())
 						s, err := secret.GetSSMSecret(k.String(), secretBytes)
 						if err != nil {
-							log.Error("Failed to get secret from SSM",
-								zap.Error(err),
-								zap.String("key", k.String()),
-							)
-
 							return nil, err
 						}
 
@@ -293,7 +263,7 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 	return td, nil
 }
 
-func getFile(k, b string, svc s3iface.S3API) ([]byte, error) {
+func getFile(k, b string, svc s3iface.S3API, log *zap.Logger) ([]byte, error) {
 
 	var body []byte
 

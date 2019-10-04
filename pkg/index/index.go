@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,15 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/rapid7/cps/pkg/ec2meta"
 )
-
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-}
 
 var (
 	metadata ec2meta.Instance
@@ -64,8 +56,6 @@ func ParseIndex(b, region string) ([]string, error) {
 			paths = append(paths, path)
 		}
 	}
-
-	log.Println(paths)
 
 	return paths, nil
 }
