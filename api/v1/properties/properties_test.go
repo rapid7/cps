@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/rapid7/cps/logger"
 	"github.com/rapid7/cps/pkg/kv"
 )
 
@@ -53,7 +54,9 @@ func TestGetProperties(t *testing.T) {
 }
 
 func toHandleAllProps(w http.ResponseWriter, r *http.Request) {
-	GetProperties(w, r, account, region)
+	log := logger.BuildLogger()
+
+	GetProperties(w, r, account, region, log)
 }
 
 func TestGetProperty(t *testing.T) {
@@ -92,5 +95,7 @@ func TestGetProperty(t *testing.T) {
 }
 
 func toHandleOneProp(w http.ResponseWriter, r *http.Request) {
-	GetProperty(w, r, account, region)
+	log := logger.BuildLogger()
+
+	GetProperty(w, r, account, region, log)
 }

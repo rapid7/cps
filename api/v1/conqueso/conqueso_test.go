@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/rapid7/cps/logger"
 	"github.com/rapid7/cps/pkg/kv"
 )
 
@@ -54,5 +55,7 @@ func TestGetConquesoProperties(t *testing.T) {
 }
 
 func toHandle(w http.ResponseWriter, r *http.Request) {
-	GetConquesoProperties(w, r, account, region)
+	log := logger.BuildLogger()
+
+	GetConquesoProperties(w, r, account, region, log)
 }
