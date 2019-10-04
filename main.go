@@ -2,42 +2,39 @@ package main
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	cq "github.com/rapid7/cps/api/v1/conqueso"
 	health "github.com/rapid7/cps/api/v1/health"
 	props "github.com/rapid7/cps/api/v1/properties"
 	v2health "github.com/rapid7/cps/api/v2/health"
 	v2props "github.com/rapid7/cps/api/v2/properties"
+	logger "github.com/rapid7/cps/logger"
 	kv "github.com/rapid7/cps/pkg/kv"
 	consul "github.com/rapid7/cps/watchers/v1/consul"
 	file "github.com/rapid7/cps/watchers/v1/file"
 	s3 "github.com/rapid7/cps/watchers/v1/s3"
 	v2file "github.com/rapid7/cps/watchers/v2/file"
 	v2s3 "github.com/rapid7/cps/watchers/v2/s3"
-
-	log "github.com/sirupsen/logrus"
 )
-
-func init() {
-	// logging
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-}
 
 func main() {
 
-	log.Print("cps started")
+	log := logger.BuildLogger()
+
+	log.Info("CPS started")
 
 	viper.SetConfigName("cps")
 	viper.AddConfigPath("/etc/cps/")
 	viper.AddConfigPath(".")
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("Fatal error reading in config file: %s", err)
+		log.Fatal("Fatal error reading in config file",
+			zap.Error(err),
+		)
 	}
 
 	viper.SetDefault("file.enabled", false)
@@ -46,15 +43,15 @@ func main() {
 
 	account := viper.GetString("account")
 	if account == "" {
-		log.Fatalf("Config `account` is required!")
+		log.Fatal("Config `account` is required!")
 	}
 	region := viper.GetString("region")
 	if region == "" {
-		log.Fatalf("Config `region` is required!")
+		log.Fatal("Config `region` is required!")
 	}
 	bucket := viper.GetString("s3.bucket")
 	if bucket == "" && !fileEnabled {
-		log.Fatalf("Config `s3.bucket` is required!")
+		log.Fatal("Config `s3.bucket` is required!")
 	}
 
 	viper.SetDefault("s3.region", "us-east-1")
@@ -83,31 +80,35 @@ func main() {
 		}).Methods("GET")
 
 		if fileEnabled {
-			log.Print("File mode is enabled, disabling s3 and consul watchers")
+			log.Info("File mode is enabled, disabling s3 and consul watchers")
+
 			s3Enabled = false
-			go v2file.Poll(directory, account, region)
+
+			go v2file.Poll(directory, account, region, log)
 		}
 
 		if s3Enabled {
-			go v2s3.Poll(bucket, bucketRegion)
+			go v2s3.Poll(bucket, bucketRegion, log)
 		}
 
 		router.HandleFunc("/v2/healthz", v2health.GetHealthz).Methods("GET")
 
 	} else {
 		if fileEnabled {
-			log.Print("File mode is enabled, disabling s3 and consul watchers")
+			log.Info("File mode is enabled, disabling s3 and consul watchers")
+
 			s3Enabled = false
 			consulEnabled = false
-			go file.Poll(directory, account, region)
+
+			go file.Poll(directory, account, region, log)
 		}
 
 		if s3Enabled {
-			go s3.Poll(bucket, bucketRegion)
+			go s3.Poll(bucket, bucketRegion, log)
 		}
 
 		if consulEnabled {
-			go consul.Poll(consulHost)
+			go consul.Poll(consulHost, log)
 		} else {
 			kv.WriteProperty("consul", make(map[string][]string))
 		}
@@ -134,6 +135,8 @@ func main() {
 	}
 
 	// Serve it.
-	log.Print(http.ListenAndServe(":"+port, router))
+	log.Fatal("Failed to attach to port",
+		zap.Error(http.ListenAndServe(":"+port, router)),
+	)
 
 }
