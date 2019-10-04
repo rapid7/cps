@@ -4,20 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strconv"
 
 	mux "github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/pkg/kv"
 )
-
-func init() {
-	// logging
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-}
 
 // Error holds the data to be made into a json error message.
 type Error struct {
@@ -26,7 +19,7 @@ type Error struct {
 
 // GetProperties is a mux handler for the /v1/properties endpoint. It returns all
 // properties for a given service.
-func GetProperties(w http.ResponseWriter, r *http.Request, account string, region string) {
+func GetProperties(w http.ResponseWriter, r *http.Request, account string, region string, log *zap.Logger) {
 	vars := mux.Vars(r)
 	service := vars["service"]
 
@@ -40,7 +33,10 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account string, regio
 	serviceProperties := kv.GetProperty(path.String()).(map[string]interface{})
 
 	if len(serviceProperties) < 1 {
-		log.Errorf("Failed to get properties for service: %v", service)
+		log.Error("Failed to get properties for service",
+			zap.String("service", service),
+		)
+
 		w.Header().Set("Content-Type", "application/json")
 		e, _ := json.Marshal(Error{
 			Status: "Failed to get properties for service",
@@ -61,7 +57,11 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account string, regio
 
 	j, err := json.Marshal(combinedProperties)
 	if err != nil {
-		log.Errorf("Failed to marshal json for %v", service)
+		log.Error("Failed to marshal json for a service",
+			zap.Error(err),
+			zap.String("service", service),
+		)
+
 		w.Header().Set("Content-Type", "application/json")
 		e, _ := json.Marshal(Error{
 			Status: "failed to marshal json",
@@ -74,7 +74,7 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account string, regio
 }
 
 // GetProperty is a mux handler for getting a single property.
-func GetProperty(w http.ResponseWriter, r *http.Request, account, region string) {
+func GetProperty(w http.ResponseWriter, r *http.Request, account, region string, log *zap.Logger) {
 	vars := mux.Vars(r)
 	service := vars["service"]
 	property := vars["property"]
@@ -103,7 +103,12 @@ func GetProperty(w http.ResponseWriter, r *http.Request, account, region string)
 	case nil:
 		line = "{}"
 	default:
-		log.Errorf("Could not parse %v:%v, v is of type %T", property, serviceProperty, t)
+		log.Error("Unsupported type!",
+			zap.String("key", property),
+			zap.Any("value", serviceProperty),
+			zap.Any("type", t),
+		)
+
 		line = "{}"
 	}
 

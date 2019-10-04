@@ -3,23 +3,18 @@ package conqueso
 import (
 	"bytes"
 	"net/http"
-	"os"
 	"strconv"
 
+	"go.uber.org/zap"
+
 	mux "github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/rapid7/cps/pkg/kv"
 )
 
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-}
-
 // GetConquesoProperties is a Handler for /v1/conqueso/{service}.
 // It returns a service's properties in the java property style.
-func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account string, region string) {
+func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account string, region string, log *zap.Logger) {
 	vars := mux.Vars(r)
 	service := vars["service"]
 
@@ -59,7 +54,11 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 		case float64:
 			line = k + "=" + strconv.FormatFloat(v.(float64), 'f', -1, 64) + "\n"
 		default:
-			log.Errorf("Could not parse %v:%v, v is of type %T", k, v, t)
+			log.Error("Unsupported type!",
+				zap.String("key", k),
+				zap.Any("value", v),
+				zap.Any("type", t),
+			)
 		}
 		output.WriteString(line)
 	}

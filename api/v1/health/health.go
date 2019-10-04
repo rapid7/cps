@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/rapid7/cps/watchers/v1/consul"
 	"github.com/rapid7/cps/watchers/v1/s3"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Health is a wrapper for all health data.
@@ -25,7 +25,7 @@ type HealthPlugins struct {
 
 // GetHealth is a mux handler for the health endpoint. It checks health for
 // various components and returns the results as json.
-func GetHealth(w http.ResponseWriter, r *http.Request) {
+func GetHealth(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	var status int
 	if s3.Health == true && consul.Health == true {
 		status = 200
@@ -40,8 +40,12 @@ func GetHealth(w http.ResponseWriter, r *http.Request) {
 			S3:     s3.Health,
 		},
 	})
+
 	if err != nil {
-		log.Error(err)
+		log.Error("Failed to marshal json!",
+			zap.Error(err),
+		)
+
 		return
 	}
 
