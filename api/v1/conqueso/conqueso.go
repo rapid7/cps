@@ -9,7 +9,7 @@ import (
 
 	mux "github.com/gorilla/mux"
 
-	"github.com/rapid7/cps/pkg/kv"
+	"github.com/rapid7/cps/kv"
 )
 
 // GetConquesoProperties is a Handler for /v1/conqueso/{service}.

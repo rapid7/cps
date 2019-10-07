@@ -9,7 +9,7 @@ import (
 	mux "github.com/gorilla/mux"
 	"go.uber.org/zap"
 
-	"github.com/rapid7/cps/pkg/kv"
+	"github.com/rapid7/cps/kv"
 )
 
 // Error holds the data to be made into a json error message.

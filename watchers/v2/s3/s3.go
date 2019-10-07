@@ -17,9 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"go.uber.org/zap"
 
-	"github.com/rapid7/cps/pkg/index"
-	"github.com/rapid7/cps/pkg/kv"
-	"github.com/rapid7/cps/pkg/secret"
+	"github.com/rapid7/cps/index"
+	"github.com/rapid7/cps/kv"
+	"github.com/rapid7/cps/secret"
 )
 
 var (

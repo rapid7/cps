@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	"go.uber.org/zap"
 
-	"github.com/rapid7/cps/pkg/kv"
+	"github.com/rapid7/cps/kv"
 )
 
 var (
