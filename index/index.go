@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	"github.com/rapid7/cps/pkg/ec2meta"
+	"github.com/rapid7/cps/ec2meta"
 )
 
 var (

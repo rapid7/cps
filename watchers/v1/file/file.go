@@ -10,8 +10,8 @@ import (
 	"github.com/buger/jsonparser"
 	"go.uber.org/zap"
 
-	"github.com/rapid7/cps/pkg/kv"
-	"github.com/rapid7/cps/pkg/secret"
+	"github.com/rapid7/cps/kv"
+	"github.com/rapid7/cps/secret"
 )
 
 var (

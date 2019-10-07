@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rapid7/cps/pkg/kv"
 	"go.uber.org/zap"
 
 	mux "github.com/gorilla/mux"
 	gjson "github.com/tidwall/gjson"
+
+	"github.com/rapid7/cps/kv"
 )
 
 // Error is unused currently but it intended to supply a detailed

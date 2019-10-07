@@ -8,8 +8,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/rapid7/cps/kv"
 	"github.com/rapid7/cps/logger"
-	"github.com/rapid7/cps/pkg/kv"
 )
 
 var (
