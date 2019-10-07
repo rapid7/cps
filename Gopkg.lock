@@ -30,7 +30,6 @@
     "private/protocol/rest",
     "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
-    "service/kms",
     "service/s3",
     "service/s3/s3iface",
     "service/ssm",
@@ -216,14 +215,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:3ac248add5bb40a3c631c5334adcd09aa72d15af2768a5bc0274084ea7b2e5ba"
-  name = "github.com/sirupsen/logrus"
-  packages = ["."]
-  pruneopts = ""
-  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
-  version = "v1.0.3"
-
-[[projects]]
   digest = "1:d3e2e29bc7342053edc85e1ad751275694a96d58516f749cf3413db1a0eca2ba"
   name = "github.com/spf13/afero"
   packages = [
@@ -334,20 +325,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a992f0c68fa56538ede286e9e3827341fab57b7532552a771f47a32db0e6117b"
-  name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
-  pruneopts = ""
-  revision = "bd6f299fb381e4c3393d1c4b1f0b94f5e77650c8"
-
-[[projects]]
-  branch = "master"
   digest = "1:da939d913a9f7bb1a0841c2066029f940f12a79b7693d3456dd220fa2ed74879"
   name = "golang.org/x/sys"
-  packages = [
-    "unix",
-    "windows",
-  ]
+  packages = ["unix"]
   pruneopts = ""
   revision = "95c6576299259db960f6c5b9b69ea52422860fce"
 
@@ -383,7 +363,6 @@
     "github.com/aws/aws-sdk-go/aws/ec2metadata",
     "github.com/aws/aws-sdk-go/aws/request",
     "github.com/aws/aws-sdk-go/aws/session",
-    "github.com/aws/aws-sdk-go/service/kms",
     "github.com/aws/aws-sdk-go/service/s3",
     "github.com/aws/aws-sdk-go/service/s3/s3iface",
     "github.com/aws/aws-sdk-go/service/ssm",
@@ -391,7 +370,6 @@
     "github.com/gorilla/mux",
     "github.com/hashicorp/consul/api",
     "github.com/hashicorp/consul/testutil",
-    "github.com/sirupsen/logrus",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
