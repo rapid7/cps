@@ -118,6 +118,10 @@ func listBucket(bucket, region string, svc s3iface.S3API, log *zap.Logger) ([]*s
 		return nil, err
 	}
 
+	log.Info("Using index to map index.yml/json dynamic values",
+		zap.Any("index", i),
+	)
+
 	var responses []*s3.ListObjectsOutput
 
 	for _, prefix := range i {
