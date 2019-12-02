@@ -25,9 +25,9 @@ type HealthPlugins struct {
 
 // GetHealth is a mux handler for the health endpoint. It checks health for
 // various components and returns the results as json.
-func GetHealth(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
+func GetHealth(w http.ResponseWriter, r *http.Request, log *zap.Logger, consulEnabled bool) {
 	var status int
-	if s3.Health == true && consul.Health == true {
+	if (s3.Health == true && !consulEnabled) || (s3.Health == true && consul.Health == true && consulEnabled) {
 		status = 200
 	} else {
 		status = 503

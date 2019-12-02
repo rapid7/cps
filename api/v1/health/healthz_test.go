@@ -23,9 +23,10 @@ func TestGetHealthz(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	consulEnabled := false
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		GetHealthz(w, r, log)
+		GetHealthz(w, r, log, consulEnabled)
 	})
 
 	handler.ServeHTTP(rr, req)
@@ -37,12 +38,13 @@ func TestGetHealthz(t *testing.T) {
 	expectedJSON := `{"status":"down","consul":false,"s3":false}`
 	assert.Equal(t, expectedJSON, rr.Body.String())
 
+	consulEnabled = true
 	consul.Up = true
 	s3.Up = true
 
 	rr = httptest.NewRecorder()
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		GetHealthz(w, r, log)
+		GetHealthz(w, r, log, consulEnabled)
 	})
 
 	handler.ServeHTTP(rr, req)

@@ -20,9 +20,10 @@ func TestGetHealth(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	consulEnabled := false
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		GetHealth(w, r, log)
+		GetHealth(w, r, log, consulEnabled)
 	})
 
 	handler.ServeHTTP(rr, req)
@@ -31,12 +32,13 @@ func TestGetHealth(t *testing.T) {
 		t.Errorf("Status code is wrong when unhealthy: expected %v got %v", status, http.StatusServiceUnavailable)
 	}
 
+	consulEnabled = true
 	consul.Health = true
 	s3.Health = true
 
 	rr = httptest.NewRecorder()
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		GetHealth(w, r, log)
+		GetHealth(w, r, log, consulEnabled)
 	})
 
 	handler.ServeHTTP(rr, req)

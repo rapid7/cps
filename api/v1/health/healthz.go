@@ -18,9 +18,9 @@ type Response struct {
 
 // GetHealthz is a mux handler for the /v1/healthz endpoint. It returns detailed
 // health information about all dependent services.
-func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
+func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger, consulEnabled bool) {
 	status := "down"
-	if s3.Up == true && consul.Up == true {
+	if (s3.Up == true && !consulEnabled) || (s3.Up == true && consul.Up == true && consulEnabled) {
 		status = "up"
 	}
 
