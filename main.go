@@ -131,12 +131,12 @@ func main() {
 
 		// Health returns detailed information about CPS health.
 		router.HandleFunc("/v1/health", func(w http.ResponseWriter, r *http.Request) {
-			health.GetHealth(w, r, log)
+			health.GetHealth(w, r, log, consulEnabled)
 		}).Methods("GET")
 
 		// Healthz returns only basic health.
 		router.HandleFunc("/v1/healthz", func(w http.ResponseWriter, r *http.Request) {
-			health.GetHealthz(w, r, log)
+			health.GetHealthz(w, r, log, consulEnabled)
 		}).Methods("GET")
 	}
 
