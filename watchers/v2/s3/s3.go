@@ -216,45 +216,47 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 			di := reflect.ValueOf(d.MapIndex(k).Interface())
 
 			for _, ik := range di.MapKeys() {
-				valueT := reflect.TypeOf(di.MapIndex(ik).Interface()).Kind()
-				if valueT == reflect.Map {
-					// This is an ssm object. Get The secret's value
-					// and add it to the map we return.
-					if _, ok := d.MapIndex(k).Interface().(map[string]interface{})["$ssm"]; ok {
-						secretBytes, _ := json.Marshal(d.MapIndex(k).Interface())
-						s, err := secret.GetSSMSecret(k.String(), secretBytes)
-						if err != nil {
-							return nil, err
-						}
+				if _, ok := di.MapIndex(ik).Interface().(map[string]interface{}); ok {
+					valueT := reflect.TypeOf(di.MapIndex(ik).Interface()).Kind()
+					if valueT == reflect.Map {
+						// This is an ssm object. Get The secret's value
+						// and add it to the map we return.
+						if _, ok := d.MapIndex(k).Interface().(map[string]interface{})["$ssm"]; ok {
+							secretBytes, _ := json.Marshal(d.MapIndex(k).Interface())
+							s, err := secret.GetSSMSecret(k.String(), secretBytes)
+							if err != nil {
+								return nil, err
+							}
 
-						if td[k.String()] == nil {
-							td[k.String()] = make(map[string]interface{})
-						}
+							if td[k.String()] == nil {
+								td[k.String()] = make(map[string]interface{})
+							}
 
-						td[k.String()] = s
-						td, _ = injectSecrets(td)
+							td[k.String()] = s
+							td, _ = injectSecrets(td)
+						} else {
+							// This is not an ssm object, but is an object.
+							// Add it to the map we return.
+							if td[k.String()] == nil {
+								td[k.String()] = make(map[string]interface{})
+							}
+
+							keyMap := td[k.String()].(map[string]interface{})
+							if valueT == reflect.Map || valueT == reflect.Slice {
+								keyMap[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
+							} else {
+								keyMap[ik.String()] = di.MapIndex(ik).Interface()
+							}
+						}
 					} else {
-						// This is not an ssm object, but is an object.
-						// Add it to the map we return.
+						// This is not a map. Add the value to the inner key.
 						if td[k.String()] == nil {
 							td[k.String()] = make(map[string]interface{})
 						}
 
 						keyMap := td[k.String()].(map[string]interface{})
-						if valueT == reflect.Map || valueT == reflect.Slice {
-							keyMap[ik.String()], _ = injectSecrets(di.MapIndex(ik).Interface())
-						} else {
-							keyMap[ik.String()] = di.MapIndex(ik).Interface()
-						}
+						keyMap[ik.String()] = di.MapIndex(ik).Interface()
 					}
-				} else {
-					// This is not a map. Add the value to the inner key.
-					if td[k.String()] == nil {
-						td[k.String()] = make(map[string]interface{})
-					}
-
-					keyMap := td[k.String()].(map[string]interface{})
-					keyMap[ik.String()] = di.MapIndex(ik).Interface()
 				}
 			}
 		} else {
