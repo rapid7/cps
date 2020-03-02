@@ -8,9 +8,8 @@ RUN apk add --update-cache git && \
   mkdir -p /etc/cps && \
   go get -u github.com/golang/dep/cmd/dep && \
   export GOPATH=/go && \
-  dep ensure -v && go build -o /cps -v && \
-  rm -rf /go/src/cps/*
-
+  dep ensure -v && make build && mv cps /
+  
 FROM alpine:latest
 
 WORKDIR /
