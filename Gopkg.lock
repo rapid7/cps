@@ -204,12 +204,12 @@
   revision = "a61a99592b77c9ba629d254a693acffaeb4b7e28"
 
 [[projects]]
-  branch = "master"
-  digest = "1:eb9117392ee8e7aa44f78e0db603f70b1050ee0ebda4bd40040befb5b218c546"
+  digest = "1:ff5b6661a5893f7759144c8d69a5b9a7d744ca9eee7a2df4560213fc39291038"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   pruneopts = ""
-  revision = "bb74f1db0675b241733089d5a1faa5dd8b0ef57b"
+  revision = "8ebf2d61a8b4adcce25fc9fc9b76e8452a00672f"
+  version = "v1.4.1"
 
 [[projects]]
   digest = "1:d60cfeee185019d4fcd35e8c89c83aff576e4723b6100300bf67b05be961388f"
@@ -408,6 +408,7 @@
     "github.com/gorilla/mux",
     "github.com/hashicorp/consul/api",
     "github.com/hashicorp/consul/testutil",
+    "github.com/mitchellh/mapstructure",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",

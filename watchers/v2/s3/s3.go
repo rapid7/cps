@@ -244,7 +244,7 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 					if valueT == reflect.Map {
 						// This is an ssm object. Get The secret's value
 						// and add it to the map we return.
-						if _, ok := d.MapIndex(k).Interface().(map[string]interface{})["$ssm"]; ok {
+						if _, ok := d.MapIndex(k).Interface().(map[string]interface{})[secret.SSMIdentifier]; ok {
 							secretBytes, _ := json.Marshal(d.MapIndex(k).Interface())
 							s, err := secret.GetSSMSecret(k.String(), secretBytes)
 							if err != nil {
