@@ -1,7 +1,6 @@
 # Directories
 vendor/
 local-files/
-.git/
 
 # Files
 cps.json
