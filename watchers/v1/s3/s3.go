@@ -39,6 +39,10 @@ type config struct {
 	bucketRegion string
 }
 
+type S3API interface {
+	s3iface.S3API
+}
+
 func init() {
 	Health = false
 	Up = false
@@ -93,19 +97,19 @@ func Sync(t time.Time, log *zap.Logger) {
 	log.Info("S3 sync finished")
 }
 
-func setUpAwsSession(region string) s3iface.S3API {
+func setUpAwsSession(region string) S3API {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Region: aws.String(region),
 		},
 	}))
 
-	var svc s3iface.S3API = s3.New(sess)
+	var svc S3API = s3.New(sess)
 
 	return svc
 }
 
-func listBucket(bucket string, svc s3iface.S3API, log *zap.Logger) (*s3.ListObjectsOutput, error) {
+func listBucket(bucket string, svc S3API, log *zap.Logger) (*s3.ListObjectsOutput, error) {
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(bucket),
 	}
@@ -124,7 +128,7 @@ func listBucket(bucket string, svc s3iface.S3API, log *zap.Logger) (*s3.ListObje
 	return resp, nil
 }
 
-func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API, log *zap.Logger) error {
+func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc S3API, log *zap.Logger) error {
 	var wg sync.WaitGroup
 	wg.Add(len(resp.Contents))
 
@@ -145,7 +149,7 @@ func parseAllFiles(resp *s3.ListObjectsOutput, bucket string, svc s3iface.S3API,
 	return nil
 }
 
-func parsePropertyFile(k string, b string, svc s3iface.S3API, log *zap.Logger) {
+func parsePropertyFile(k string, b string, svc S3API, log *zap.Logger) {
 	isJSON, _ := regexp.Compile(".json$")
 
 	if isJSON.MatchString(k) {
