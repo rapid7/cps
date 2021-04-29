@@ -7,11 +7,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"go.uber.org/zap"
 )
 
 var (
 	log *zap.Logger
+	// ErrMissingRegion is a typed error if a SSM stanza is missing a region
+	ErrMissingRegion = errors.New("SSM credential is missing the region key")
 )
 
 func init() {
@@ -19,19 +22,27 @@ func init() {
 }
 
 const (
+	// SSMIdentifier is the magic string identifying an SSM secret stanza
 	SSMIdentifier = "$ssm"
 )
 
+// SSM is a plain-old-Go-object for carrying structured SSM stanzas in CPS props
 type SSM struct {
-	SSM struct{
-		Service string `mapstructure:"service"`
-		Region string `mapstructure:"region"`
-		Label string `mapstructure:"label"`
+	SSM struct {
+		Service   string `mapstructure:"service"`
+		Region    string `mapstructure:"region"`
+		Label     string `mapstructure:"label"`
 		Encrypted string `mapstructure:"encrypted"`
 	} `mapstructure:"$ssm"`
 }
 
-func GetSSMSecretWithLabels(name string, cred SSM) (string, error) {
+// SSMAPI is a local wrapper over aws-sdk-go's SSM API
+type SSMAPI interface {
+	ssmiface.SSMAPI
+}
+
+// GetSSMSecretWithLabels gets a decrypted SSM secret, supporting searching by labels as well
+func GetSSMSecretWithLabels(svc SSMAPI, name string, cred SSM) (string, error) {
 	if cred.SSM.Region == "" || cred.SSM.Encrypted == "" {
 		return "", errors.New("not a valid SSM stanza")
 	}
@@ -39,16 +50,10 @@ func GetSSMSecretWithLabels(name string, cred SSM) (string, error) {
 	if cred.SSM.Service != "" {
 		path += cred.SSM.Service
 	}
-	
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String(cred.SSM.Region),
-		},
-	}))
-	svc := ssm.New(sess)
+
 	params := &ssm.GetParametersByPathInput{
-		Path:             aws.String(path),
-		WithDecryption:   aws.Bool(true),
+		Path:           aws.String(path),
+		WithDecryption: aws.Bool(true),
 	}
 
 	if cred.SSM.Label != "" {
@@ -60,7 +65,6 @@ func GetSSMSecretWithLabels(name string, cred SSM) (string, error) {
 			},
 		}
 	}
-
 
 	p, err := svc.GetParametersByPath(params)
 	if err != nil {
@@ -97,9 +101,21 @@ func GetSSMSecretWithLabels(name string, cred SSM) (string, error) {
 	return found, nil
 }
 
+// GetSSMSession gets a regional SSM session
+func GetSSMSession(region string) SSMAPI {
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			Region: aws.String(region),
+		},
+	}))
+
+	var svc SSMAPI = ssm.New(sess)
+	return svc
+}
+
 // GetSSMSecret parses all properties looking for an
 // $ssm key. When found, it gets the ssm parameter store
-// secret and writes the key and secret to the kv store.
+// secret and writes the key and secret to GetSSMSessionthe kv store.
 func GetSSMSecret(k string, v []byte) (string, error) {
 	var j map[string]interface{}
 	err := json.Unmarshal(v, &j)
