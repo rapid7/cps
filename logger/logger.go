@@ -50,3 +50,12 @@ func ConfigWithLevel(l zapcore.Level) ConfigOption {
 		config.Level = zap.NewAtomicLevelAt(l)
 	}
 }
+
+// ConfigWithDevelopmentMode configures a logger for dev mode
+func ConfigWithDevelopmentMode() ConfigOption {
+	return func(config *zap.Config) {
+		config.Development = true
+		config.Encoding = "console"
+		ConfigWithLevel(zapcore.DebugLevel)(config)
+	}
+}

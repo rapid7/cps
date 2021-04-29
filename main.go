@@ -33,6 +33,9 @@ func main() {
 	viper.SetConfigName("cps")
 	viper.AddConfigPath("/etc/cps/")
 	viper.AddConfigPath(".")
+	viper.SetEnvPrefix("cps")
+	// Allow dev mode to be set via env var
+	viper.BindEnv("dev") //nolint: errcheck
 
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
@@ -52,6 +55,13 @@ func main() {
 			panic(fmt.Sprintf("Fatal error attempting to set log level: %s", err))
 		}
 		logOpts = []logger.ConfigOption{logger.ConfigWithLevel(l)}
+	}
+
+	devMode := viper.GetBool("dev")
+	if devMode {
+		logOpts = []logger.ConfigOption{
+			logger.ConfigWithDevelopmentMode(),
+		}
 	}
 
 	log := logger.BuildLogger(logOpts...)
