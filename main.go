@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/rapid7/cps/api"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -172,9 +174,16 @@ func main() {
 		}).Methods("GET")
 	}
 
+	// Add request logging middleware and recovery handler
+	h := api.RequestLoggingMiddleware(log)(
+		handlers.RecoveryHandler(
+			handlers.PrintRecoveryStack(true),
+		)(router),
+	)
+
 	// Serve it.
 	log.Fatal("Failed to attach to port",
-		zap.Error(http.ListenAndServe(":"+port, router)),
+		zap.Error(http.ListenAndServe(":"+port, h)),
 	)
 
 }

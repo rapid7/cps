@@ -77,12 +77,28 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:258547daeb3edd92a5e909008d7402ad64a1615a27a2e2181e19f8859a5a0517"
+  name = "github.com/felixge/httpsnoop"
+  packages = ["."]
+  pruneopts = ""
+  revision = "42c30f944879059639bcf7b2ca4aba06f4a83198"
+  version = "v1.0.2"
+
+[[projects]]
   digest = "1:eb53021a8aa3f599d29c7102e65026242bdedce998a54837dc67f14b6a97c5fd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   pruneopts = ""
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   version = "v1.4.7"
+
+[[projects]]
+  digest = "1:9bd66f1a97ec13d279a9d979b315fa4cb17303e71bf89243e70dd096f1be735d"
+  name = "github.com/gorilla/handlers"
+  packages = ["."]
+  pruneopts = ""
+  revision = "d453effd20e6817a8acfd9d278dadd21371da0ba"
+  version = "v1.5.1"
 
 [[projects]]
   digest = "1:20e3b61797cba6a42b110320b703a0b86e2771f324411e75557c2acbc819b1b5"
@@ -388,6 +404,7 @@
     "github.com/aws/aws-sdk-go/service/s3/s3iface",
     "github.com/aws/aws-sdk-go/service/ssm",
     "github.com/buger/jsonparser",
+    "github.com/gorilla/handlers",
     "github.com/gorilla/mux",
     "github.com/hashicorp/consul/api",
     "github.com/hashicorp/consul/testutil",
