@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	cq "github.com/rapid7/cps/api/v1/conqueso"
 	"github.com/rapid7/cps/api/v1/health"
@@ -23,10 +25,6 @@ import (
 )
 
 func main() {
-
-	log := logger.BuildLogger()
-
-	log.Info("CPS started")
 	var configFile string
 	flag.StringVar(&configFile, "config", "", "(Optional) Config file")
 	flag.StringVar(&configFile, "c", "", "(Optional) Config file")
@@ -42,10 +40,22 @@ func main() {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatal("Fatal error reading in config file",
-			zap.Error(err),
-		)
+		panic(fmt.Sprintf("Fatal error reading in config file: %s", err))
 	}
+
+	logOpts := make([]logger.ConfigOption, 0)
+	logLevel := viper.GetString("log.level")
+	if logLevel != "" {
+		// translate string level to type
+		var l zapcore.Level
+		if err := l.UnmarshalText([]byte(logLevel)); err != nil {
+			panic(fmt.Sprintf("Fatal error attempting to set log level: %s", err))
+		}
+		logOpts = []logger.ConfigOption{logger.ConfigWithLevel(l)}
+	}
+
+	log := logger.BuildLogger(logOpts...)
+	defer log.Sync() //nolint: errcheck
 
 	viper.SetDefault("file.enabled", false)
 	fileEnabled := viper.GetBool("file.enabled")
@@ -81,6 +91,8 @@ func main() {
 
 	viper.SetDefault("port", "9100")
 	port := viper.GetString("port")
+
+	log.Info("CPS started")
 
 	router := mux.NewRouter()
 
