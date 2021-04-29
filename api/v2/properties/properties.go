@@ -34,7 +34,7 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	jsoni := kv.GetProperty(service)
 	if jsoni == nil {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{}`))
+		w.Write([]byte(`{}`)) //nolint: errcheck
 		return
 	}
 
@@ -47,7 +47,7 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		)
 
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{}`))
+		w.Write([]byte(`{}`)) //nolint: errcheck
 		return
 	}
 
@@ -73,9 +73,9 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		f := strings.Join(fullPath, ".")
 		p := gjson.GetBytes(j, "properties")
 		selected := gjson.GetBytes([]byte(p.String()), f)
-		w.Write([]byte(strings.TrimSpace(selected.String())))
+		w.Write([]byte(strings.TrimSpace(selected.String()))) //nolint: errcheck
 	} else {
 		p := gjson.GetBytes(j, "properties")
-		w.Write([]byte(strings.TrimSpace(p.String())))
+		w.Write([]byte(strings.TrimSpace(p.String()))) //nolint: errcheck
 	}
 }

@@ -33,15 +33,15 @@ func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 			zap.Error(err),
 		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{}`))
+		w.Write([]byte(`{}`)) //nolint: errcheck
 		return
 	}
 
 	if status == "down" {
- 		w.WriteHeader(http.StatusServiceUnavailable)
+		w.WriteHeader(http.StatusServiceUnavailable)
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	w.Write(data)
+	w.Write(data) //nolint: errcheck
 }

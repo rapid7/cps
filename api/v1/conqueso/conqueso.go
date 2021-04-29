@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"go.uber.org/zap"
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/kv"
 )

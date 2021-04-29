@@ -39,7 +39,8 @@ type config struct {
 	bucketRegion string
 }
 
-type S3API interface {
+// S3API is a local wrapper over aws-sdk-go's S3 API
+type S3API interface { //nolint: golint
 	s3iface.S3API
 }
 

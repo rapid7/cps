@@ -7,8 +7,7 @@ import (
 	"github.com/rapid7/cps/version"
 )
 
-
-
+// BuildLogger builds a logger with config options
 func BuildLogger(options ...ConfigOption) *zap.Logger {
 	initialFields := map[string]interface{}{"commit": version.GitCommit}
 
