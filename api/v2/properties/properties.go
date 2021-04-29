@@ -27,11 +27,14 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	vars := mux.Vars(r)
 	scope := strings.Split(vars["scope"], "/")
 	service := scope[0]
-	fullPath := scope[1:len(scope)]
+	fullPath := scope[1:]
+
+	w.Header().Set("Content-Type", "application/json")
 
 	jsoni := kv.GetProperty(service)
-
 	if jsoni == nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{}`))
 		return
 	}
 
@@ -42,10 +45,16 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		log.Error("Failed to compact json",
 			zap.Error(err),
 		)
+
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{}`))
+		return
 	}
 
-	j := []byte(b.Bytes())
+	j := b.Bytes()
 
+	// We're past errors we expect so let's write 200
+	w.WriteHeader(http.StatusOK)
 	// If fullPath is greater than 0 we are returning
 	// a subset of the json if available. The else clause
 	// returns the entire set of properties if available.
@@ -64,10 +73,8 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		f := strings.Join(fullPath, ".")
 		p := gjson.GetBytes(j, "properties")
 		selected := gjson.GetBytes([]byte(p.String()), f)
-		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(strings.TrimSpace(selected.String())))
 	} else {
-		w.Header().Set("Content-Type", "application/json")
 		p := gjson.GetBytes(j, "properties")
 		w.Write([]byte(strings.TrimSpace(p.String())))
 	}

@@ -22,21 +22,26 @@ func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		status = "up"
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	data, err := json.Marshal(Response{
 		Status: status,
 		S3:     s3.Up,
 	})
-
 	if err != nil {
 		log.Error("Failed to unmarshal json",
 			zap.Error(err),
 		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{}`))
+		return
 	}
 
 	if status == "down" {
-		w.WriteHeader(http.StatusServiceUnavailable)
+ 		w.WriteHeader(http.StatusServiceUnavailable)
+	} else {
+		w.WriteHeader(http.StatusOK)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
