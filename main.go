@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -26,10 +27,19 @@ func main() {
 	log := logger.BuildLogger()
 
 	log.Info("CPS started")
+	var configFile string
+	flag.StringVar(&configFile, "config", "", "(Optional) Config file")
+	flag.StringVar(&configFile, "c", "", "(Optional) Config file")
+	flag.Parse()
 
 	viper.SetConfigName("cps")
 	viper.AddConfigPath("/etc/cps/")
 	viper.AddConfigPath(".")
+
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
+	}
+
 	err := viper.ReadInConfig()
 	if err != nil {
 		log.Fatal("Fatal error reading in config file",
