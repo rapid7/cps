@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/rapid7/cps/watchers/v1/consul"
 	"github.com/rapid7/cps/watchers/v1/s3"
-	"go.uber.org/zap"
 )
 
 // Response Holds the json response for the /v1/healthz endpoint.

@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	mux "github.com/gorilla/mux"
-	gjson "github.com/tidwall/gjson"
+	"github.com/gorilla/mux"
+	"github.com/tidwall/gjson"
 
 	"github.com/rapid7/cps/kv"
 )

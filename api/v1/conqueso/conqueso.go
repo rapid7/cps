@@ -6,8 +6,7 @@ import (
 	"strconv"
 
 	"go.uber.org/zap"
-
-	mux "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 
 	"github.com/rapid7/cps/kv"
 )
