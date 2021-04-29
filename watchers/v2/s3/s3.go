@@ -41,6 +41,10 @@ var (
 type config struct {
 	bucket       string
 	bucketRegion string
+
+// S3API is a local wrapper over aws-sdk-go's S3 API
+type S3API interface { //nolint: golint
+	s3iface.S3API
 }
 
 // Poll polls every 60 seconds, kicking off an S3 sync.
@@ -79,7 +83,7 @@ func Sync(t time.Time, log *zap.Logger) {
 	svc := setUpAwsSession(region)
 	resp, err := listBucket(bucket, region, svc, log)
 	if err != nil {
-		log.Error("Failed to list bucket",
+		log.Error("failed to list bucket",
 			zap.Error(err),
 			zap.String("bucket", bucket),
 			zap.String("region", region),
@@ -100,25 +104,25 @@ func Sync(t time.Time, log *zap.Logger) {
 	log.Info("S3 sync finished")
 }
 
-func setUpAwsSession(region string) s3iface.S3API {
+func setUpAwsSession(region string) S3API {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Region: aws.String(region),
 		},
 	}))
 
-	var svc s3iface.S3API = s3.New(sess)
+	var svc S3API = s3.New(sess)
 
 	return svc
 }
 
-func listBucket(bucket, region string, svc s3iface.S3API, log *zap.Logger) ([]*s3.ListObjectsOutput, error) {
+func listBucket(bucket, region string, svc S3API, log *zap.Logger) ([]*s3.ListObjectsOutput, error) {
 	i, err := index.ParseIndex(bucket, region)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info("Using index to map index.yml/json dynamic values",
+	log.Info("using index to map index.yml/json dynamic values",
 		zap.Any("index", i),
 	)
 
@@ -132,7 +136,7 @@ func listBucket(bucket, region string, svc s3iface.S3API, log *zap.Logger) ([]*s
 
 		resp, err := svc.ListObjects(params)
 		if err != nil {
-			log.Error("Error listing s3 objects",
+			log.Error("error listing s3 objects",
 				zap.Error(err),
 				zap.String("bucket", bucket),
 				zap.String("region", region),
@@ -150,7 +154,7 @@ func listBucket(bucket, region string, svc s3iface.S3API, log *zap.Logger) ([]*s
 	return responses, nil
 }
 
-func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3API, log *zap.Logger) error {
+func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc S3API, log *zap.Logger) error {
 	var files []string
 
 	for _, object := range resp {
@@ -162,13 +166,13 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 	return getPropertyFiles(files, bucket, svc, log)
 }
 
-func getPropertyFiles(files []string, b string, svc s3iface.S3API, log *zap.Logger) error {
+func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) error {
 	services := make(map[string]interface{})
 
 	for _, f := range files {
 		body, err := getFile(f, b, svc, log)
 		if err != nil {
-			log.Error("Error getting file",
+			log.Error("error getting file",
 				zap.Error(err),
 				zap.String("file", f),
 			)
@@ -180,7 +184,7 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API, log *zap.Logg
 		serviceName := service[0 : len(service)-5]
 		serviceProperties := make(map[string]interface{})
 		if err := json.Unmarshal(body, &serviceProperties); err != nil {
-			log.Error("There was an error unmarshalling properties",
+			log.Error("error unmarshalling properties",
 				zap.Error(err),
 				zap.String("service_name", serviceName),
 				zap.String("file", f),
@@ -292,7 +296,7 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 	return td, nil
 }
 
-func getFile(k, b string, svc s3iface.S3API, log *zap.Logger) ([]byte, error) {
+func getFile(k, b string, svc S3API, log *zap.Logger) ([]byte, error) {
 
 	var body []byte
 
