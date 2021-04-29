@@ -159,24 +159,27 @@ func parseAllFiles(resp []*s3.ListObjectsOutput, bucket string, svc s3iface.S3AP
 		}
 	}
 
-	if err := getPropertyFiles(files, bucket, svc, log); err != nil {
-		return err
-	}
-
-	return nil
+	return getPropertyFiles(files, bucket, svc, log)
 }
 
 func getPropertyFiles(files []string, b string, svc s3iface.S3API, log *zap.Logger) error {
 	services := make(map[string]interface{})
 
 	for _, f := range files {
-		body, _ := getFile(f, b, svc, log)
+		body, err := getFile(f, b, svc, log)
+		if err != nil {
+			log.Error("Error getting file",
+				zap.Error(err),
+				zap.String("file", f),
+			)
+			return err
+		}
+
 		pathSplit := strings.Split(f, "/")
 		service := pathSplit[len(pathSplit)-1]
 		serviceName := service[0 : len(service)-5]
 		serviceProperties := make(map[string]interface{})
-		err := json.Unmarshal(body, &serviceProperties)
-		if err != nil {
+		if err := json.Unmarshal(body, &serviceProperties); err != nil {
 			log.Error("There was an error unmarshalling properties",
 				zap.Error(err),
 				zap.String("service_name", serviceName),
@@ -185,6 +188,11 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API, log *zap.Logg
 
 			return err
 		}
+
+		log.Debug("parsed properties file",
+			zap.String("service", serviceName),
+			zap.String("file", f),
+		)
 
 		services[serviceName] = serviceProperties
 	}
@@ -200,8 +208,23 @@ func getPropertyFiles(files []string, b string, svc s3iface.S3API, log *zap.Logg
 	}
 
 	for k, v := range s {
-		serviceBytes, _ := json.Marshal(v)
-		kv.WriteProperty(k, serviceBytes)
+		serviceBytes, err := json.Marshal(v)
+		if err != nil {
+			log.Error("There was an error marshalling properties for storage",
+				zap.Error(err),
+				zap.Any("value", v),
+			)
+
+			return err
+		}
+		if err := kv.WriteProperty(k, serviceBytes); err != nil {
+			log.Error("There was an error writing properties to kv store",
+				zap.Error(err),
+				zap.String("key", k),
+			)
+
+			return err
+		}
 	}
 
 	return nil
