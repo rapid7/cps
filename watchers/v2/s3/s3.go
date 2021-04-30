@@ -24,6 +24,18 @@ import (
 	"github.com/rapid7/cps/secret"
 )
 
+// SecretHandlerVersion is a type indicating which version of secret handler we should use
+type SecretHandlerVersion int
+
+const (
+	// V0 is iota
+	V0 SecretHandlerVersion = iota
+	// V1 is the v1 version enum-ish value of secret injection
+	V1
+	// V2 is the v2 version enum-ish value of secret injection
+	V2
+)
+
 var (
 	// Up contains the systems availability. If true there are no issues with s3.
 	Up bool
@@ -43,6 +55,8 @@ var (
 type config struct {
 	bucket               string
 	bucketRegion         string
+	secretHandlerVersion SecretHandlerVersion
+}
 
 // S3API is a local wrapper over aws-sdk-go's S3 API
 type S3API interface { //nolint: golint
@@ -50,10 +64,11 @@ type S3API interface { //nolint: golint
 }
 
 // Poll polls every 60 seconds, kicking off an S3 sync.
-func Poll(bucket, bucketRegion string, log *zap.Logger) {
+func Poll(bucket, bucketRegion string, v SecretHandlerVersion, log *zap.Logger) {
 	Config = config{
 		bucket:               bucket,
 		bucketRegion:         bucketRegion,
+		secretHandlerVersion: v,
 	}
 
 	Sync(time.Now(), log)
@@ -203,17 +218,51 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 		services[serviceName] = serviceProperties
 	}
 
-	s, err := injectSecrets(services)
+	var sm map[string]interface{}
+	switch Config.secretHandlerVersion {
+	case V1:
+		var err error
+		sm, err = injectSecrets(services)
 		if err != nil {
-		log.Error("There was an error injecting secrets",
+			log.Error("error injecting secrets",
 				zap.Error(err),
 				zap.Any("services", services),
+				zap.Any("inject_version", Config.secretHandlerVersion),
 			)
 
 			return err
 		}
+	case V2:
+		s, err := injectSecretsV2(log, services)
+		if err != nil {
+			log.Error("error injecting secrets",
+				zap.Error(err),
+				zap.Any("services", services),
+				zap.Any("inject_version", Config.secretHandlerVersion),
+			)
 
-	for k, v := range s {
+			return err
+		}
+		var ok bool
+		sm, ok = s.(map[string]interface{})
+		if !ok {
+			log.Error("error handling properties from secret injection",
+				zap.Any("services", services),
+				zap.Any("inject_version", Config.secretHandlerVersion),
+			)
+
+			return err
+		}
+	default:
+		log.Error("attempted to use an unsupported handler version",
+			zap.Any("inject_version", Config.secretHandlerVersion),
+		)
+
+		return fmt.Errorf("invalid secret handler version: %v", Config.secretHandlerVersion)
+
+	}
+
+	for k, v := range sm {
 		serviceBytes, err := json.Marshal(v)
 		if err != nil {
 			log.Error("There was an error marshalling properties for storage",

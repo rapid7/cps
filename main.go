@@ -122,7 +122,10 @@ func main() {
 		}
 
 		if s3Enabled {
-			go v2s3.Poll(bucket, bucketRegion, log)
+			viper.SetDefault("secret.version", v2s3.V1)
+			secretVersion := viper.GetInt("secret.version")
+			sv := v2s3.SecretHandlerVersion(secretVersion)
+			go v2s3.Poll(bucket, bucketRegion, sv, log)
 		}
 
 		router.HandleFunc("/v2/healthz", func(w http.ResponseWriter, r *http.Request) {
