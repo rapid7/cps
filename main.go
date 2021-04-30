@@ -7,10 +7,11 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/rapid7/cps/api"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/rapid7/cps/api"
 
 	cq "github.com/rapid7/cps/api/v1/conqueso"
 	"github.com/rapid7/cps/api/v1/health"
@@ -122,7 +123,7 @@ func main() {
 		}
 
 		if s3Enabled {
-			viper.SetDefault("secret.version", v2s3.V1)
+			viper.SetDefault("secret.version", int(v2s3.V1))
 			secretVersion := viper.GetInt("secret.version")
 			sv := v2s3.SecretHandlerVersion(secretVersion)
 			go v2s3.Poll(bucket, bucketRegion, sv, log)
