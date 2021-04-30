@@ -1,6 +1,7 @@
 # Directories
 vendor/
 local-files/
+.build/
 
 # Artifacts
 cps
