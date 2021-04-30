@@ -2,6 +2,7 @@ package s3
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"reflect"
 	"regexp"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/mitchellh/mapstructure"
 	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/index"
@@ -39,8 +41,8 @@ var (
 )
 
 type config struct {
-	bucket       string
-	bucketRegion string
+	bucket               string
+	bucketRegion         string
 
 // S3API is a local wrapper over aws-sdk-go's S3 API
 type S3API interface { //nolint: golint
@@ -50,8 +52,8 @@ type S3API interface { //nolint: golint
 // Poll polls every 60 seconds, kicking off an S3 sync.
 func Poll(bucket, bucketRegion string, log *zap.Logger) {
 	Config = config{
-		bucket:       bucket,
-		bucketRegion: bucketRegion,
+		bucket:               bucket,
+		bucketRegion:         bucketRegion,
 	}
 
 	Sync(time.Now(), log)
@@ -202,14 +204,14 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 	}
 
 	s, err := injectSecrets(services)
-	if err != nil {
+		if err != nil {
 		log.Error("There was an error injecting secrets",
-			zap.Error(err),
-			zap.Any("services", services),
-		)
+				zap.Error(err),
+				zap.Any("services", services),
+			)
 
-		return err
-	}
+			return err
+		}
 
 	for k, v := range s {
 		serviceBytes, err := json.Marshal(v)
@@ -232,6 +234,72 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 	}
 
 	return nil
+}
+
+var getSSMClient = secret.GetSSMSession
+
+// injectSecretsV2 improves upon the V1 mechanism by removing the use of reflection and correctly covering
+// nested map and array cases.
+// NOTE: We currently don't have a way of handling the case of an array of SSM objects (i.e. [{"$ssm": {}}, {"$ssm": {}}])
+// because there's nothing to identify the property name.
+func injectSecretsV2(log *zap.Logger, data interface{}) (interface{}, error) {
+	switch val := data.(type) {
+	case map[string]interface{}:
+		out := make(map[string]interface{})
+		if len(val) == 0 {
+			return out, nil
+		}
+		for k, v := range val {
+			var injected interface{}
+			var err error
+			if s, ok := v.(map[string]interface{}); ok {
+				if _, ok := s[secret.SSMIdentifier]; ok {
+					var ssm secret.SSM
+					if err := mapstructure.Decode(s, &ssm); err != nil {
+						log.Error("unable to decode SSM stanza to struct",
+							zap.Error(err),
+							zap.String("key", k),
+						)
+						continue
+					}
+					if ssm.SSM.Region == "" {
+						log.Error(secret.ErrMissingRegion.Error(),
+							zap.String("key", k),
+						)
+						continue
+					}
+					svc := getSSMClient(ssm.SSM.Region)
+					decrypted, err := secret.GetSSMSecretWithLabels(svc, k, ssm)
+					if err != nil {
+						return nil, err
+					}
+					out[k] = decrypted
+					continue
+				}
+			}
+			injected, err = injectSecretsV2(log, v)
+			if err != nil {
+				return nil, err
+			}
+			out[k] = injected
+		}
+		return out, nil
+	case []interface{}:
+		out := make([]interface{}, 0)
+		if len(val) == 0 {
+			return out, nil
+		}
+		for _, v := range val {
+			injected, err := injectSecretsV2(log, v)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, injected)
+		}
+		return out, nil
+	default:
+		return val, nil
+	}
 }
 
 func injectSecrets(data interface{}) (map[string]interface{}, error) {
