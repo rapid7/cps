@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	mux "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/kv"
@@ -32,16 +32,29 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account string, regio
 
 	serviceProperties := kv.GetProperty(path.String()).(map[string]interface{})
 
+	w.Header().Set("Content-Type", "application/json")
+
 	if len(serviceProperties) < 1 {
 		log.Error("Failed to get properties for service",
 			zap.String("service", service),
 		)
 
-		w.Header().Set("Content-Type", "application/json")
 		e, _ := json.Marshal(Error{
 			Status: "Failed to get properties for service",
 		})
+
+		// TODO: determine if a non-200 response code is acceptable in error cases
+		// See https://github.com/golang/go/blob/master/src/net/http/server.go#L1538-L1539 specifically:
+		// > Writing before sending a header sends an implicitly empty 200 OK header.
+		// Thus, in order to implement HEAD request handlers we explicitly write the 200 and only write
+		// on a GET request
+		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodHead {
+			return
+		}
+
 		w.Write(e)
+		return
 	}
 
 	combinedProperties := make(map[string]interface{})
@@ -62,15 +75,25 @@ func GetProperties(w http.ResponseWriter, r *http.Request, account string, regio
 			zap.String("service", service),
 		)
 
-		w.Header().Set("Content-Type", "application/json")
 		e, _ := json.Marshal(Error{
 			Status: "failed to marshal json",
 		})
+
+		// TODO: See TODO above about explicitly setting response codes even in error conditions
+		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodHead {
+			return
+		}
+
 		w.Write(e)
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(j)
+		return
 	}
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
+	w.Write(j)
 }
 
 // GetProperty is a mux handler for getting a single property.
@@ -115,5 +138,9 @@ func GetProperty(w http.ResponseWriter, r *http.Request, account, region string,
 	output.WriteString(line)
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if r.Method == http.MethodHead {
+		return
+	}
+
 	w.Write(output.Bytes())
 }

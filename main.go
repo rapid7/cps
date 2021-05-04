@@ -112,7 +112,7 @@ func main() {
 	if apiVersion == 2 {
 		router.HandleFunc("/v2/properties/{scope:.*}", func(w http.ResponseWriter, r *http.Request) {
 			v2props.GetProperties(w, r, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		if fileEnabled {
 			log.Info("File mode is enabled, disabling s3 and consul watchers")
@@ -131,7 +131,7 @@ func main() {
 
 		router.HandleFunc("/v2/healthz", func(w http.ResponseWriter, r *http.Request) {
 			v2health.GetHealthz(w, r, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 	} else {
 		if fileEnabled {
@@ -155,27 +155,55 @@ func main() {
 
 		router.HandleFunc("/v1/properties/{service}", func(w http.ResponseWriter, r *http.Request) {
 			props.GetProperties(w, r, account, region, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		router.HandleFunc("/v1/conqueso/{service}", func(w http.ResponseWriter, r *http.Request) {
 			cq.GetConquesoProperties(w, r, account, region, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		router.HandleFunc("/v1/properties/{service}/{property}", func(w http.ResponseWriter, r *http.Request) {
 			props.GetProperty(w, r, account, region, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
-		router.HandleFunc("/v1/conqueso/{service}", cq.PostConqueso).Methods("POST")
+		router.HandleFunc("/v1/conqueso/{service}", cq.PostConqueso).Methods(http.MethodPost, http.MethodHead)
 
 		// Health returns detailed information about CPS health.
 		router.HandleFunc("/v1/health", func(w http.ResponseWriter, r *http.Request) {
 			health.GetHealth(w, r, log, consulEnabled)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		// Healthz returns only basic health.
 		router.HandleFunc("/v1/healthz", func(w http.ResponseWriter, r *http.Request) {
 			health.GetHealthz(w, r, log, consulEnabled)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
+	}
+
+	if devMode {
+		fmt.Println("\nRoutes:")
+		if err := router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+			if route.GetHandler() == nil {
+				return nil
+			}
+
+			methods, err := route.GetMethods()
+			if err != nil {
+				return err
+			}
+
+			template, err := route.GetPathTemplate()
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(methods, template)
+
+			return nil
+		}); err != nil {
+			log.Fatal("error walking routes",
+				zap.Error(err),
+			)
+		}
+		fmt.Println("")
 	}
 
 	// Add request logging middleware and recovery handler

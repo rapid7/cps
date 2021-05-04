@@ -33,6 +33,10 @@ func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 			zap.Error(err),
 		)
 		w.WriteHeader(http.StatusInternalServerError)
+		if r.Method == http.MethodHead {
+			return
+		}
+
 		w.Write([]byte(`{}`)) //nolint: errcheck
 		return
 	}
@@ -43,5 +47,8 @@ func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		w.WriteHeader(http.StatusOK)
 	}
 
+	if r.Method == http.MethodHead {
+		return
+	}
 	w.Write(data) //nolint: errcheck
 }

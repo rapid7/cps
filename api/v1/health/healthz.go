@@ -42,5 +42,9 @@ func GetHealthz(w http.ResponseWriter, r *http.Request, log *zap.Logger, consulE
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	if r.Method == http.MethodHead {
+		return
+	}
+
 	w.Write(data)
 }

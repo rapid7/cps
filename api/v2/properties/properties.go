@@ -34,6 +34,10 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	jsoni := kv.GetProperty(service)
 	if jsoni == nil {
 		w.WriteHeader(http.StatusNotFound)
+		if r.Method == http.MethodHead {
+			return
+		}
+
 		w.Write([]byte(`{}`)) //nolint: errcheck
 		return
 	}
@@ -47,6 +51,10 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		)
 
 		w.WriteHeader(http.StatusInternalServerError)
+		if r.Method == http.MethodHead {
+			return
+		}
+
 		w.Write([]byte(`{}`)) //nolint: errcheck
 		return
 	}
@@ -55,6 +63,9 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 
 	// We're past errors we expect so let's write 200
 	w.WriteHeader(http.StatusOK)
+	if r.Method == http.MethodHead {
+		return
+	}
 	// If fullPath is greater than 0 we are returning
 	// a subset of the json if available. The else clause
 	// returns the entire set of properties if available.

@@ -63,6 +63,10 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if r.Method == http.MethodHead {
+		return
+	}
+
 	w.Write(output.Bytes())
 }
 
