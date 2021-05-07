@@ -3,6 +3,7 @@ package secret
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -80,7 +81,8 @@ func GetSSMSecretWithLabels(svc SSMAPI, name string, cred SSM) (string, error) {
 
 	var found string
 	for _, param := range p.Parameters {
-		if aws.StringValue(param.Name) == name {
+		parameterName := aws.StringValue(param.Name)
+		if strings.Replace(parameterName, path+"/", "", 1) == name {
 			found = aws.StringValue(param.Value)
 			break
 		}

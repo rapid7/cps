@@ -226,7 +226,6 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 		if err != nil {
 			log.Error("error injecting secrets",
 				zap.Error(err),
-				zap.Any("services", services),
 				zap.Any("inject_version", Config.secretHandlerVersion),
 			)
 
@@ -237,7 +236,6 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 		if err != nil {
 			log.Error("error injecting secrets",
 				zap.Error(err),
-				zap.Any("services", services),
 				zap.Any("inject_version", Config.secretHandlerVersion),
 			)
 
@@ -247,7 +245,6 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 		sm, ok = s.(map[string]interface{})
 		if !ok {
 			log.Error("error handling properties from secret injection",
-				zap.Any("services", services),
 				zap.Any("inject_version", Config.secretHandlerVersion),
 			)
 
