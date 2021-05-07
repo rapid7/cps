@@ -1,6 +1,7 @@
 package secret
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -14,8 +15,8 @@ import (
 
 var (
 	log *zap.Logger
-	// ErrMissingRegion is a typed error if a SSM stanza is missing a region
-	ErrMissingRegion = errors.New("SSM credential is missing the region key")
+	// ErrSSMMissingRegion is a typed error if a SSM stanza is missing a region
+	ErrSSMMissingRegion = errors.New("SSM credential is missing the region key")
 )
 
 func init() {
@@ -43,7 +44,7 @@ type SSMAPI interface {
 }
 
 // GetSSMSecretWithLabels gets a decrypted SSM secret, supporting searching by labels as well
-func GetSSMSecretWithLabels(svc SSMAPI, name string, cred SSM) (string, error) {
+func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred SSM) (string, error) {
 	if cred.SSM.Region == "" || cred.SSM.Encrypted == "" {
 		return "", errors.New("not a valid SSM stanza")
 	}
@@ -67,7 +68,7 @@ func GetSSMSecretWithLabels(svc SSMAPI, name string, cred SSM) (string, error) {
 		}
 	}
 
-	p, err := svc.GetParametersByPath(params)
+	p, err := svc.GetParametersByPathWithContext(ctx, params)
 	if err != nil {
 		log.Error("Error getting SSM parameters",
 			zap.Error(err),
@@ -105,13 +106,7 @@ func GetSSMSecretWithLabels(svc SSMAPI, name string, cred SSM) (string, error) {
 
 // GetSSMSession gets a regional SSM session
 func GetSSMSession(region string) SSMAPI {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String(region),
-		},
-	}))
-
-	var svc SSMAPI = ssm.New(sess)
+	var svc SSMAPI = ssm.New(getSession(region))
 	return svc
 }
 

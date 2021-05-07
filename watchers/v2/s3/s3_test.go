@@ -1,16 +1,20 @@
 package s3
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/go-test/deep"
-	"github.com/rapid7/cps/secret"
 	"go.uber.org/zap"
+
+	"github.com/rapid7/cps/secret"
 )
 
 var (
@@ -38,6 +42,7 @@ var (
 
 func TestNestedPropertiesAreConsistentAfterInjecting(t *testing.T) {
 	log := zap.NewNop()
+	ctx := context.Background()
 
 	var serviceProps map[string]interface{}
 	if err := json.Unmarshal([]byte(service1Props), &serviceProps); err != nil {
@@ -58,7 +63,7 @@ func TestNestedPropertiesAreConsistentAfterInjecting(t *testing.T) {
 			"If there's no diff, this test should be updated.")
 	}
 
-	recursiveInjectedProps, err := injectSecretsV2(log, props)
+	recursiveInjectedProps, err := injectSecretsV2(ctx, log, props)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +84,7 @@ type mockSSMService struct {
 	Response  func() (*ssm.GetParametersByPathOutput, error)
 }
 
-func (m mockSSMService) GetParametersByPath(input *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error) {
+func (m mockSSMService) GetParametersByPathWithContext(ctx context.Context, input *ssm.GetParametersByPathInput, opts ...request.Option) (*ssm.GetParametersByPathOutput, error) {
 	if m.Validator == nil {
 		return nil, ErrNilValidator
 	}
@@ -93,7 +98,7 @@ func (m mockSSMService) GetParametersByPath(input *ssm.GetParametersByPathInput)
 	return m.Response()
 }
 
-func defaultValidator(input *ssm.GetParametersByPathInput) error {
+func defaultSSMValidator(input *ssm.GetParametersByPathInput) error {
 	if *input.Path != "/" {
 		return fmt.Errorf("no service key present, expected path to be `/` but got %s instead", *input.Path)
 	}
@@ -104,7 +109,36 @@ func defaultValidator(input *ssm.GetParametersByPathInput) error {
 	return nil
 }
 
-func TestInjectSecretsV2(t *testing.T) {
+type mockKMSService struct {
+	secret.KMSAPI
+	Validator func(input *kms.DecryptInput) error
+	Response  func() (*kms.DecryptOutput, error)
+}
+
+func (m mockKMSService) DecryptWithContext(ctx context.Context, input *kms.DecryptInput, opts ...request.Option) (*kms.DecryptOutput, error) {
+	if m.Validator == nil {
+		return nil, ErrNilValidator
+	}
+	if err := m.Validator(input); err != nil {
+		return nil, err
+	}
+
+	if m.Response == nil {
+		return nil, ErrNilResponse
+	}
+
+	return m.Response()
+}
+
+func defaultKMSValidator(input *kms.DecryptInput) error {
+	if len(input.CiphertextBlob) == 0 {
+		return errors.New("ciphertext blob was empty when a value was expected")
+	}
+
+	return nil
+}
+
+func TestInjectSSMSecretsV2(t *testing.T) {
 	log := zap.NewNop()
 
 	testCases := []struct {
@@ -127,7 +161,7 @@ func TestInjectSecretsV2(t *testing.T) {
 		}
 	}
 }`),
-			validator: defaultValidator,
+			validator: defaultSSMValidator,
 			output: func() (*ssm.GetParametersByPathOutput, error) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
@@ -182,7 +216,7 @@ func TestInjectSecretsV2(t *testing.T) {
 		}
 	}
 }`),
-			validator: defaultValidator,
+			validator: defaultSSMValidator,
 			output: func() (*ssm.GetParametersByPathOutput, error) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
@@ -240,7 +274,7 @@ func TestInjectSecretsV2(t *testing.T) {
 		}
 	}
 }`),
-			validator: defaultValidator,
+			validator: defaultSSMValidator,
 			output: func() (*ssm.GetParametersByPathOutput, error) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
@@ -373,6 +407,8 @@ func TestInjectSecretsV2(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			var serviceProps map[string]interface{}
 			if err := json.Unmarshal(test.input, &serviceProps); err != nil {
 				t.Fatal(err)
@@ -392,7 +428,291 @@ func TestInjectSecretsV2(t *testing.T) {
 				getSSMClient = secret.GetSSMSession
 			}()
 
-			injectedProps, err := injectSecretsV2(log, props)
+			injectedProps, err := injectSecretsV2(ctx, log, props)
+			test.expected(t, props, injectedProps, err)
+		})
+	}
+}
+
+func TestInjectKMSSecretsV2(t *testing.T) {
+	log := zap.NewNop()
+
+	testCases := []struct {
+		name      string
+		input     []byte
+		validator func(input *kms.DecryptInput) error
+		output    func() (*kms.DecryptOutput, error)
+		expected  func(*testing.T, map[string]interface{}, interface{}, error)
+	}{
+		{
+			name: "flat properties",
+			input: []byte(`
+{
+	"properties": {
+		"flat": {
+			"$kms": {
+				"region": "us-east-1",
+          		"encrypted": "RU5DUllQVEVEIFNFQ1JFVA=="
+			}
+		}
+	}
+}`),
+			validator: defaultKMSValidator,
+			output: func() (*kms.DecryptOutput, error) {
+				return &kms.DecryptOutput{
+					EncryptionAlgorithm: aws.String("SYMMETRIC_DEFAULT"),
+					KeyId:               aws.String("some key"),
+					Plaintext:           []byte("DECRYPTED!"),
+				}, nil
+			},
+			expected: func(t *testing.T, props map[string]interface{}, newProps interface{}, err error) {
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				diff := deep.Equal(props, newProps)
+				if diff == nil {
+					t.Fatal(diff)
+				}
+
+				if len(diff) != 1 {
+					t.Fatalf("expected 1 diff but got %d", len(diff))
+				}
+
+				flatProp, err := nestedMapLookup(newProps.(map[string]interface{}), "service1", "properties", "flat")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if flatProp.(string) != "DECRYPTED!" {
+					t.Fatalf("expected `flat` property to be `DECRYPTED!` but got %s instead", flatProp)
+				}
+			},
+		},
+		{
+			name: "nested properties",
+			input: []byte(`
+{
+	"properties": {
+		"nested": {
+			"a": {
+				"few": {
+					"levels": {
+						"$kms": {
+							"region": "us-east-1",
+							"encrypted": "RU5DUllQVEVEIFNFQ1JFVA=="
+						}
+					}
+				}
+			}
+		}
+	}
+}`),
+			validator: defaultKMSValidator,
+			output: func() (*kms.DecryptOutput, error) {
+				return &kms.DecryptOutput{
+					EncryptionAlgorithm: aws.String("SYMMETRIC_DEFAULT"),
+					KeyId:               aws.String("some key"),
+					Plaintext:           []byte("DECRYPTED!"),
+				}, nil
+			},
+			expected: func(t *testing.T, props map[string]interface{}, newProps interface{}, err error) {
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				diff := deep.Equal(props, newProps)
+				if diff == nil {
+					t.Fatal(diff)
+				}
+
+				if len(diff) != 1 {
+					t.Fatalf("expected 1 diff but got %d", len(diff))
+				}
+
+				levelsProp, err := nestedMapLookup(newProps.(map[string]interface{}),
+					"service1", "properties", "nested", "a", "few", "levels")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if levelsProp.(string) != "DECRYPTED!" {
+					t.Fatalf("expected `levelsProp` property to be `DECRYPTED!` but got %s instead", levelsProp)
+				}
+			},
+		},
+		{
+			name: "multiple props",
+			input: []byte(`
+{
+	"properties": {
+		"nested": {
+			"prop": {
+				"$kms": {
+					"region": "us-east-1",
+					"encrypted": "RU5DUllQVEVEIFNFQ1JFVA=="
+				}
+			}
+		},
+		"prop": {
+			"$kms": {
+				"region": "us-east-1",
+				"encrypted": "RU5DUllQVEVEIFNFQ1JFVA=="
+			}
+		}
+	}
+}`),
+			validator: defaultKMSValidator,
+			output: func() (*kms.DecryptOutput, error) {
+				return &kms.DecryptOutput{
+					EncryptionAlgorithm: aws.String("SYMMETRIC_DEFAULT"),
+					KeyId:               aws.String("some key"),
+					Plaintext:           []byte("DECRYPTED!"),
+				}, nil
+			},
+			expected: func(t *testing.T, props map[string]interface{}, newProps interface{}, err error) {
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				diff := deep.Equal(props, newProps)
+				if diff == nil {
+					t.Fatal(diff)
+				}
+
+				if len(diff) != 2 {
+					t.Fatalf("expected 2 diff but got %d", len(diff))
+				}
+
+				prop1, err := nestedMapLookup(newProps.(map[string]interface{}),
+					"service1", "properties", "nested", "prop")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				prop2, err := nestedMapLookup(newProps.(map[string]interface{}),
+					"service1", "properties", "prop")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if prop1.(string) != "DECRYPTED!" {
+					t.Fatalf("expected `prop1` property to be `DECRYPTED!` but got %s instead", prop1)
+				}
+
+				if prop2.(string) != "DECRYPTED!" {
+					t.Fatalf("expected `prop2` property to be `DECRYPTED!` but got %s instead", prop2)
+				}
+			},
+		},
+		{
+			name: "null values",
+			input: []byte(`
+{
+	"properties": {
+		"nested": {
+			"prop": "hi!"
+		},
+		"prop": null
+	}
+}`),
+			expected: func(t *testing.T, props map[string]interface{}, newProps interface{}, err error) {
+				if err != nil {
+					t.Fatal(err)
+				}
+				diff := deep.Equal(props, newProps)
+				if diff != nil {
+					t.Fatal(diff)
+				}
+
+				prop1, err := nestedMapLookup(newProps.(map[string]interface{}),
+					"service1", "properties", "nested", "prop")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				prop2, err := nestedMapLookup(newProps.(map[string]interface{}),
+					"service1", "properties", "prop")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if prop1.(string) != "hi!" {
+					t.Fatalf("expected `prop1` property to be `hi!` but got %s instead", prop1)
+				}
+
+				if prop2 != nil {
+					t.Fatalf("expected `prop2` property to be nil but got %v instead", prop2)
+				}
+			},
+		},
+		{
+			name: "empty array and object values",
+			input: []byte(`
+{
+	"properties": {
+		"nested": {
+			"prop": {}
+		},
+		"prop": []
+	}
+}`),
+			expected: func(t *testing.T, props map[string]interface{}, newProps interface{}, err error) {
+				if err != nil {
+					t.Fatal(err)
+				}
+				diff := deep.Equal(props, newProps)
+				if diff != nil {
+					t.Fatal(diff)
+				}
+
+				prop1, err := nestedMapLookup(newProps.(map[string]interface{}),
+					"service1", "properties", "nested", "prop")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				prop2, err := nestedMapLookup(newProps.(map[string]interface{}),
+					"service1", "properties", "prop")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if m, ok := prop1.(map[string]interface{}); !ok || len(m) != 0 {
+					t.Fatalf("expected `prop1` property to be an empty map but got %v instead", prop1)
+				}
+
+				if s, ok := prop2.([]interface{}); !ok || len(s) != 0 {
+					t.Fatalf("expected `prop2` property to be an empty slice but got %v instead", prop2)
+				}
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			var serviceProps map[string]interface{}
+			if err := json.Unmarshal(test.input, &serviceProps); err != nil {
+				t.Fatal(err)
+			}
+			props := map[string]interface{}{
+				"service1": serviceProps,
+			}
+
+			mockKMS := mockKMSService{
+				Validator: test.validator,
+				Response:  test.output,
+			}
+			getKMSClient = func(region string) secret.KMSAPI {
+				return mockKMS
+			}
+			defer func() {
+				getKMSClient = secret.GetKMSSession
+			}()
+
+			injectedProps, err := injectSecretsV2(ctx, log, props)
 			test.expected(t, props, injectedProps, err)
 		})
 	}

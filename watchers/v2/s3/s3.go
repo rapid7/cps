@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -232,7 +233,7 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 			return err
 		}
 	case V2:
-		s, err := injectSecretsV2(log, services)
+		s, err := injectSecretsV2(context.TODO(), log, services)
 		if err != nil {
 			log.Error("error injecting secrets",
 				zap.Error(err),
@@ -282,13 +283,16 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 	return nil
 }
 
-var getSSMClient = secret.GetSSMSession
+var (
+	getSSMClient = secret.GetSSMSession
+	getKMSClient = secret.GetKMSSession
+)
 
 // injectSecretsV2 improves upon the V1 mechanism by removing the use of reflection and correctly covering
 // nested map and array cases.
 // NOTE: We currently don't have a way of handling the case of an array of SSM objects (i.e. [{"$ssm": {}}, {"$ssm": {}}])
 // because there's nothing to identify the property name.
-func injectSecretsV2(log *zap.Logger, data interface{}) (interface{}, error) {
+func injectSecretsV2(ctx context.Context, log *zap.Logger, data interface{}) (interface{}, error) {
 	switch val := data.(type) {
 	case map[string]interface{}:
 		out := make(map[string]interface{})
@@ -300,30 +304,35 @@ func injectSecretsV2(log *zap.Logger, data interface{}) (interface{}, error) {
 			var err error
 			if s, ok := v.(map[string]interface{}); ok {
 				if _, ok := s[secret.SSMIdentifier]; ok {
-					var ssm secret.SSM
-					if err := mapstructure.Decode(s, &ssm); err != nil {
-						log.Error("unable to decode SSM stanza to struct",
+					decrypted, err := handleSSMSecret(ctx, s, k)
+					if err != nil {
+						log.Error("error handling SSM secret",
 							zap.Error(err),
 							zap.String("key", k),
 						)
+						// TODO: Should we log the error and continue, with a key that doesn't have a value or
+						// should we bomb out?
 						continue
 					}
-					if ssm.SSM.Region == "" {
-						log.Error(secret.ErrMissingRegion.Error(),
+					out[k] = decrypted
+					continue
+				}
+				if _, ok := s[secret.KMSIdentifier]; ok {
+					decrypted, err := handleKMSSecret(ctx, s)
+					if err != nil {
+						log.Error("error handling KMS secret",
+							zap.Error(err),
 							zap.String("key", k),
 						)
+						// TODO: Should we log the error and continue, with a key that doesn't have a value or
+						// should we bomb out?
 						continue
-					}
-					svc := getSSMClient(ssm.SSM.Region)
-					decrypted, err := secret.GetSSMSecretWithLabels(svc, k, ssm)
-					if err != nil {
-						return nil, err
 					}
 					out[k] = decrypted
 					continue
 				}
 			}
-			injected, err = injectSecretsV2(log, v)
+			injected, err = injectSecretsV2(ctx, log, v)
 			if err != nil {
 				return nil, err
 			}
@@ -336,7 +345,7 @@ func injectSecretsV2(log *zap.Logger, data interface{}) (interface{}, error) {
 			return out, nil
 		}
 		for _, v := range val {
-			injected, err := injectSecretsV2(log, v)
+			injected, err := injectSecretsV2(ctx, log, v)
 			if err != nil {
 				return nil, err
 			}
@@ -346,6 +355,40 @@ func injectSecretsV2(log *zap.Logger, data interface{}) (interface{}, error) {
 	default:
 		return val, nil
 	}
+}
+
+func handleSSMSecret(ctx context.Context, s map[string]interface{}, k string) (string, error) {
+	var ssm secret.SSM
+	if err := mapstructure.Decode(s, &ssm); err != nil {
+		return "", fmt.Errorf("unable to decode SSM stanza to struct: %w", err)
+	}
+	if ssm.SSM.Region == "" {
+		return "", secret.ErrSSMMissingRegion
+	}
+	svc := getSSMClient(ssm.SSM.Region)
+	decrypted, err := secret.GetSSMSecretWithLabels(ctx, svc, k, ssm)
+	if err != nil {
+		return "", err
+	}
+
+	return decrypted, nil
+}
+
+func handleKMSSecret(ctx context.Context, s map[string]interface{}) (string, error) {
+	var kms secret.KMS
+	if err := mapstructure.Decode(s, &kms); err != nil {
+		return "", fmt.Errorf("unable to decode KMS stanza to struct: %w", err)
+	}
+	if kms.KMS.Region == "" {
+		return "", secret.ErrKMSMissingRegion
+	}
+	svc := getKMSClient(kms.KMS.Region)
+	decrypted, err := secret.DecryptKMSSecret(ctx, svc, kms.KMS.Encrypted)
+	if err != nil {
+		return "", err
+	}
+
+	return decrypted, nil
 }
 
 func injectSecrets(data interface{}) (map[string]interface{}, error) {
