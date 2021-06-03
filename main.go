@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/rapid7/cps/api"
-
 	cq "github.com/rapid7/cps/api/v1/conqueso"
 	"github.com/rapid7/cps/api/v1/health"
 	props "github.com/rapid7/cps/api/v1/properties"
