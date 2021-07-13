@@ -1,41 +1,73 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
+	"github.com/rapid7/cps/api"
 	cq "github.com/rapid7/cps/api/v1/conqueso"
-	health "github.com/rapid7/cps/api/v1/health"
+	"github.com/rapid7/cps/api/v1/health"
 	props "github.com/rapid7/cps/api/v1/properties"
 	v2health "github.com/rapid7/cps/api/v2/health"
 	v2props "github.com/rapid7/cps/api/v2/properties"
-	kv "github.com/rapid7/cps/kv"
-	logger "github.com/rapid7/cps/logger"
-	consul "github.com/rapid7/cps/watchers/v1/consul"
-	file "github.com/rapid7/cps/watchers/v1/file"
-	s3 "github.com/rapid7/cps/watchers/v1/s3"
+	"github.com/rapid7/cps/kv"
+	"github.com/rapid7/cps/logger"
+	"github.com/rapid7/cps/watchers/v1/consul"
+	"github.com/rapid7/cps/watchers/v1/file"
+	"github.com/rapid7/cps/watchers/v1/s3"
 	v2file "github.com/rapid7/cps/watchers/v2/file"
 	v2s3 "github.com/rapid7/cps/watchers/v2/s3"
 )
 
 func main() {
-
-	log := logger.BuildLogger()
-
-	log.Info("CPS started")
+	var configFile string
+	flag.StringVar(&configFile, "config", "", "(Optional) Config file")
+	flag.StringVar(&configFile, "c", "", "(Optional) Config file")
+	flag.Parse()
 
 	viper.SetConfigName("cps")
 	viper.AddConfigPath("/etc/cps/")
 	viper.AddConfigPath(".")
+	viper.SetEnvPrefix("cps")
+	// Allow dev mode to be set via env var
+	viper.BindEnv("dev") //nolint: errcheck
+
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
+	}
+
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatal("Fatal error reading in config file",
-			zap.Error(err),
-		)
+		panic(fmt.Sprintf("Fatal error reading in config file: %s", err))
 	}
+
+	logOpts := make([]logger.ConfigOption, 0)
+	logLevel := viper.GetString("log.level")
+	if logLevel != "" {
+		// translate string level to type
+		var l zapcore.Level
+		if err := l.UnmarshalText([]byte(logLevel)); err != nil {
+			panic(fmt.Sprintf("Fatal error attempting to set log level: %s", err))
+		}
+		logOpts = []logger.ConfigOption{logger.ConfigWithLevel(l)}
+	}
+
+	devMode := viper.GetBool("dev")
+	if devMode {
+		logOpts = []logger.ConfigOption{
+			logger.ConfigWithDevelopmentMode(),
+		}
+	}
+
+	log := logger.BuildLogger(logOpts...)
+	defer log.Sync() //nolint: errcheck
 
 	viper.SetDefault("file.enabled", false)
 	fileEnabled := viper.GetBool("file.enabled")
@@ -72,12 +104,14 @@ func main() {
 	viper.SetDefault("port", "9100")
 	port := viper.GetString("port")
 
+	log.Info("CPS started")
+
 	router := mux.NewRouter()
 
 	if apiVersion == 2 {
 		router.HandleFunc("/v2/properties/{scope:.*}", func(w http.ResponseWriter, r *http.Request) {
 			v2props.GetProperties(w, r, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		if fileEnabled {
 			log.Info("File mode is enabled, disabling s3 and consul watchers")
@@ -88,12 +122,15 @@ func main() {
 		}
 
 		if s3Enabled {
-			go v2s3.Poll(bucket, bucketRegion, log)
+			viper.SetDefault("secret.version", int(v2s3.V1))
+			secretVersion := viper.GetInt("secret.version")
+			sv := v2s3.SecretHandlerVersion(secretVersion)
+			go v2s3.Poll(bucket, bucketRegion, sv, log)
 		}
 
 		router.HandleFunc("/v2/healthz", func(w http.ResponseWriter, r *http.Request) {
 			v2health.GetHealthz(w, r, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 	} else {
 		if fileEnabled {
@@ -117,32 +154,67 @@ func main() {
 
 		router.HandleFunc("/v1/properties/{service}", func(w http.ResponseWriter, r *http.Request) {
 			props.GetProperties(w, r, account, region, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		router.HandleFunc("/v1/conqueso/{service}", func(w http.ResponseWriter, r *http.Request) {
 			cq.GetConquesoProperties(w, r, account, region, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		router.HandleFunc("/v1/properties/{service}/{property}", func(w http.ResponseWriter, r *http.Request) {
 			props.GetProperty(w, r, account, region, log)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
-		router.HandleFunc("/v1/conqueso/{service}", cq.PostConqueso).Methods("POST")
+		router.HandleFunc("/v1/conqueso/{service}", cq.PostConqueso).Methods(http.MethodPost, http.MethodHead)
 
 		// Health returns detailed information about CPS health.
 		router.HandleFunc("/v1/health", func(w http.ResponseWriter, r *http.Request) {
 			health.GetHealth(w, r, log, consulEnabled)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 
 		// Healthz returns only basic health.
 		router.HandleFunc("/v1/healthz", func(w http.ResponseWriter, r *http.Request) {
 			health.GetHealthz(w, r, log, consulEnabled)
-		}).Methods("GET")
+		}).Methods(http.MethodGet, http.MethodHead)
 	}
+
+	if devMode {
+		fmt.Println("\nRoutes:")
+		if err := router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+			if route.GetHandler() == nil {
+				return nil
+			}
+
+			methods, err := route.GetMethods()
+			if err != nil {
+				return err
+			}
+
+			template, err := route.GetPathTemplate()
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(methods, template)
+
+			return nil
+		}); err != nil {
+			log.Fatal("error walking routes",
+				zap.Error(err),
+			)
+		}
+		fmt.Println("")
+	}
+
+	// Add request logging middleware and recovery handler
+	h := api.RequestLoggingMiddleware(log)(
+		handlers.RecoveryHandler(
+			handlers.PrintRecoveryStack(true),
+		)(router),
+	)
 
 	// Serve it.
 	log.Fatal("Failed to attach to port",
-		zap.Error(http.ListenAndServe(":"+port, router)),
+		zap.Error(http.ListenAndServe(":"+port, h)),
 	)
 
 }

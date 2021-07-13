@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	mux "github.com/gorilla/mux"
-	gjson "github.com/tidwall/gjson"
+	"github.com/gorilla/mux"
+	"github.com/tidwall/gjson"
 
 	"github.com/rapid7/cps/kv"
 )
@@ -27,11 +27,18 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	vars := mux.Vars(r)
 	scope := strings.Split(vars["scope"], "/")
 	service := scope[0]
-	fullPath := scope[1:len(scope)]
+	fullPath := scope[1:]
+
+	w.Header().Set("Content-Type", "application/json")
 
 	jsoni := kv.GetProperty(service)
-
 	if jsoni == nil {
+		w.WriteHeader(http.StatusNotFound)
+		if r.Method == http.MethodHead {
+			return
+		}
+
+		w.Write([]byte(`{}`)) //nolint: errcheck
 		return
 	}
 
@@ -42,10 +49,23 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		log.Error("Failed to compact json",
 			zap.Error(err),
 		)
+
+		w.WriteHeader(http.StatusInternalServerError)
+		if r.Method == http.MethodHead {
+			return
+		}
+
+		w.Write([]byte(`{}`)) //nolint: errcheck
+		return
 	}
 
-	j := []byte(b.Bytes())
+	j := b.Bytes()
 
+	// We're past errors we expect so let's write 200
+	w.WriteHeader(http.StatusOK)
+	if r.Method == http.MethodHead {
+		return
+	}
 	// If fullPath is greater than 0 we are returning
 	// a subset of the json if available. The else clause
 	// returns the entire set of properties if available.
@@ -64,11 +84,9 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 		f := strings.Join(fullPath, ".")
 		p := gjson.GetBytes(j, "properties")
 		selected := gjson.GetBytes([]byte(p.String()), f)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(strings.TrimSpace(selected.String())))
+		w.Write([]byte(strings.TrimSpace(selected.String()))) //nolint: errcheck
 	} else {
-		w.Header().Set("Content-Type", "application/json")
 		p := gjson.GetBytes(j, "properties")
-		w.Write([]byte(strings.TrimSpace(p.String())))
+		w.Write([]byte(strings.TrimSpace(p.String()))) //nolint: errcheck
 	}
 }

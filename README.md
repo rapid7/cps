@@ -29,8 +29,7 @@ In order to run this project you need to set the following values in `cps.json` 
 - `mkdir -p ~/go/src`
 - add `export GOPATH=~/go` to your .bashrc or .zshrc
 - git clone to `~/go/src/cps`
-- `brew install go dep consul`
-- `dep ensure`
+- `brew install go consul`
 - `make`
 - `consul agent -dev -advertise 127.0.0.1` in another tab.
 - export your awsaml creds

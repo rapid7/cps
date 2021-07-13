@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
-
-	mux "github.com/gorilla/mux"
 
 	"github.com/rapid7/cps/kv"
 )
@@ -64,6 +63,10 @@ func GetConquesoProperties(w http.ResponseWriter, r *http.Request, account strin
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if r.Method == http.MethodHead {
+		return
+	}
+
 	w.Write(output.Bytes())
 }
 

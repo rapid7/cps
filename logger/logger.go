@@ -7,12 +7,13 @@ import (
 	"github.com/rapid7/cps/version"
 )
 
-func BuildLogger() *zap.Logger {
+// BuildLogger builds a logger with config options
+func BuildLogger(options ...ConfigOption) *zap.Logger {
 	initialFields := map[string]interface{}{"commit": version.GitCommit}
 
-	log, _ := zap.Config{
+	cfg := zap.Config{
 		Encoding:         "json",
-		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
 		OutputPaths:      []string{"stderr"},
 		ErrorOutputPaths: []string{"stderr"},
 		InitialFields:    initialFields,
@@ -28,7 +29,32 @@ func BuildLogger() *zap.Logger {
 			CallerKey:    "caller",
 			EncodeCaller: zapcore.ShortCallerEncoder,
 		},
-	}.Build()
+	}
+
+	for _, opt := range options {
+		opt(&cfg)
+	}
+
+	log, _ := cfg.Build()
 
 	return log
+}
+
+// ConfigOption is a way of configuring a logger
+type ConfigOption func(*zap.Config)
+
+// ConfigWithLevel configures a logger's level
+func ConfigWithLevel(l zapcore.Level) ConfigOption {
+	return func(config *zap.Config) {
+		config.Level = zap.NewAtomicLevelAt(l)
+	}
+}
+
+// ConfigWithDevelopmentMode configures a logger for dev mode
+func ConfigWithDevelopmentMode() ConfigOption {
+	return func(config *zap.Config) {
+		config.Development = true
+		config.Encoding = "console"
+		ConfigWithLevel(zapcore.DebugLevel)(config)
+	}
 }

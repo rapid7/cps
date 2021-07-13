@@ -1,13 +1,11 @@
-FROM golang:1.10.3-alpine3.7
+FROM golang:1.16.3-alpine3.13
 
-WORKDIR /go/src/github.com/rapid7/cps
-
+WORKDIR /src
+COPY . /src
 RUN apk add --update-cache git make && \
-  git clone https://github.com/rapid7/cps.git . && \
-  mkdir -p /etc/cps && \
-  go get -u github.com/golang/dep/cmd/dep && \
-  export GOPATH=/go && \
-  dep ensure -v && make build && mv cps /cps
+    mkdir /etc/cps && \
+    make build && \
+    mv cps /cps
 
 FROM alpine:latest
 
