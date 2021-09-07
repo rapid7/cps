@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Run Go Tests
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build the Docker image
+    - name: Run Go Tests
       run: |
         docker build -t cps-test -f testcontainer/Dockerfile .
         docker run cps-test
