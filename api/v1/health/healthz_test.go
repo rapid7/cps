@@ -22,7 +22,7 @@ func TestGetHealthz(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-    t.Fatal("Forcing error")
+
 	consulEnabled := false
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
