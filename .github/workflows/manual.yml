@@ -33,7 +33,7 @@ jobs:
 
       - name: Build
         run: |
-          go build -o cps_linux_amd64 -v
+          go build -o cps_linux_amd64_binary -v
           pip install PyGithub
           pip install bumpversion
           git fetch --tags
@@ -45,4 +45,4 @@ jobs:
           git config --global user.name "Actions"
           git tag -a "$NEW_VERSION" -m "version $NEW_VERSION"
           git push --follow-tags
-          python githubrelease.py ${{github.repository}} $GITHUB_TOKEN $NEW_VERSION cps_linux_amd64 cps_linux_amd64
+          python githubrelease.py ${{github.repository}} $GITHUB_TOKEN $NEW_VERSION cps_linux_amd64_binary cps-linux-amd64
