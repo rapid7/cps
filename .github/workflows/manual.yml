@@ -1,0 +1,49 @@
+# This is a basic workflow that is manually triggered
+name: Build
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      bump:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'What type of version bump to make, options: patch, minor, major.'
+        # Default value if no value is explicitly provided
+        default: 'patch'
+        # Input has to be provided for the workflow to run
+        required: true
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "greet"
+  bump:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Runs a single command using the runners shell
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Build
+        run: |
+          go build -o cps_linux_amd64 -v
+          pip install PyGithub
+          pip install bumpversion
+          git fetch --tags
+          CURRENT_VERSION=$(git tag --sort=-v:refname --list "v[0-9]*" | head -n 1)
+          bumpversion --current-version $CURRENT_VERSION ${{ github.event.inputs.bump }} VERSIONFILE
+          NEW_VERSION=$(cat VERSIONFILE)
+          git config --global user.email "github+actions@gmail.com"
+          git config --global user.name "Actions"
+          git add VERSIONFILE
+          git commit -m "version $NEW_VERSION"
+          git tag -a "$NEW_VERSION" -m "version $NEW_VERSION"
+          git push --follow-tags
+          python githubrelease.py ${{github.repository}} $GITHUB_TOKEN $NEW_VERSION cps_linux_amd64 cps_linux_amd64
