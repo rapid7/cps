@@ -38,12 +38,11 @@ jobs:
           pip install bumpversion
           git fetch --tags
           CURRENT_VERSION=$(git tag --sort=-v:refname --list "v[0-9]*" | head -n 1)
+          echo $CURRENT_VERSION > VERSIONFILE
           bumpversion --current-version $CURRENT_VERSION ${{ github.event.inputs.bump }} VERSIONFILE
           NEW_VERSION=$(cat VERSIONFILE)
           git config --global user.email "github+actions@gmail.com"
           git config --global user.name "Actions"
-          git add VERSIONFILE
-          git commit -m "version $NEW_VERSION"
           git tag -a "$NEW_VERSION" -m "version $NEW_VERSION"
           git push --follow-tags
           python githubrelease.py ${{github.repository}} $GITHUB_TOKEN $NEW_VERSION cps_linux_amd64 cps_linux_amd64
