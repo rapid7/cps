@@ -29,8 +29,7 @@ require (
 	github.com/tidwall/gjson v1.1.3
 	github.com/tidwall/match v1.0.0 // indirect
 	go.uber.org/zap v1.16.0
-	golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1 // indirect
-	golang.org/x/tools v0.0.0-20200513154647-78b527d18275 // indirect
+	golang.org/x/net v0.7.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
 
