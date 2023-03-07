@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/armon/go-metrics v0.3.6 // indirect
 	github.com/aws/aws-sdk-go v1.38.28
-	github.com/buger/jsonparser v0.0.0-20180318095312-2cac668e8456
+	github.com/buger/jsonparser v1.1.1
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/go-test/deep v1.0.7
 	github.com/gorilla/handlers v1.5.1
