@@ -1,0 +1,15 @@
+---
+info:
+  title: Cps
+  description: CPS - Centralized Property Service
+  x-cortex-git:
+    github:
+      alias: r7org
+      repository: rapid7/cps
+  x-cortex-tag: cps
+  x-cortex-type: service
+  x-cortex-domain-parents:
+  - tag: platform-delivery
+openapi: 3.0.1
+servers:
+- url: "/"
