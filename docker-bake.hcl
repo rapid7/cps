@@ -17,9 +17,11 @@ variable "MAINTAINER" {
     default = "Platform Delivery"
 }
 
-variable "CONTAINER_SERVICE" {}
+variable "CONTAINER_SERVICE" {
+}
 
-variable "APP_VERSION" {}
+variable "APP_VERSION" {
+}
 
 target "_common" {
   args = {

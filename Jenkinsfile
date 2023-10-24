@@ -2,6 +2,10 @@ pipeline {
     agent {
         kubernetes(
             k8sAgent(
+                jnlpCPU: '1',
+                jnlpMEM: '1Gi',
+                dindCPU: '4',
+                dindMEM: '8Gi',
                 idleMinutes: params.POD_IDLE_MINUTES // Pod will stay idle post build for this amount of minutes
             )
         )
