@@ -1,0 +1,19 @@
+---
+release_target:
+  PLATFORM_DEPLOYMENT:
+    account_id: "088750086149"
+    iam_role: "arn:aws:iam::088750086149:role/jenkins-platform-deployment-production"
+    regions:
+      - "ap-northeast-1"
+      - "ap-southeast-2"
+      - "ca-central-1"
+      - "eu-central-1"
+      - "us-east-1"
+      - "us-east-2"
+      - "us-west-2"
+fedramp:
+  PLATFORM_DEPLOYMENT:
+    account_id: "163526199910"
+    iam_role: "arn:aws-us-gov:iam::163526199910:role/jenkins-platform-deployment-govcloud-ecr"
+    regions:
+      - "us-gov-west-1"
