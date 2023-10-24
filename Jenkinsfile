@@ -20,6 +20,8 @@ pipeline {
     }
 
     environment {
+        ECR_REGISTRY_BUILD        = "${env.BUILD_AWS_ACCOUNT}.dkr.ecr.${env.JENKINS_REGION}.amazonaws.com"
+        ECR_LOGIN_CMD             = "aws ecr get-login-password --region ${env.JENKINS_REGION} | docker login --username AWS --password-stdin"
         ARTIFACTORY_DOCKER_REPO = 'docker-local.artifacts.corp.rapid7.com'
         BAKE_PUSH               = "${params.PUSH_TO_ECR == false ? "" : "--push"}"
         BAKE_CMD                = "BUILD_AWS_ACCOUNT=${env.BUILD_AWS_ACCOUNT} \
@@ -44,7 +46,7 @@ pipeline {
 
         stage('Login to Repos') {
             steps {
-                sh label: "Log in to build account ECR", script: 'aws ecr get-login-password --region ${BUILD_AWS_REGION} | docker login --username AWS --password-stdin "${BUILD_AWS_ACCOUNT}.dkr.ecr.${BUILD_AWS_REGION}.amazonaws.com"'
+                sh label: "Log in to build account ECR", script: "${ECR_LOGIN_CMD} ${ECR_REGISTRY_BUILD}"
                 withCredentials([usernamePassword(credentialsId: 'artifactory-deployment-credentials', usernameVariable: 'ARTIFACTORY_USERNAME', passwordVariable: 'ARTIFACTORY_PWD')]) {
                     sh label: "Log in to artifactory repository", script: 'docker login -u "${ARTIFACTORY_USERNAME}" -p "${ARTIFACTORY_PWD}" "${ARTIFACTORY_DOCKER_REPO}"'
                 }
