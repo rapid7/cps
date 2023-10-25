@@ -28,7 +28,7 @@ help:
 all: test build
 
 build: ## Build CPS binary
-	$(GOBUILD) -o $(BINARY_NAME) -v -ldflags "-s -w -X github.com/rapid7/cps/version.GitCommit=$(GIT_COMMIT)"
+	GOARCH=${GOARCH} $(GOBUILD) -o $(BINARY_NAME) -v -ldflags "-s -w -X github.com/rapid7/cps/version.GitCommit=$(GIT_COMMIT)"
 
 test: ## Run unit tests
 	$(GOTEST) -v ./...
