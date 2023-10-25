@@ -35,7 +35,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         run: |
-          go build -o cps_linux_amd64_binary -v
+          go build -o cps_linux_binary -v
           pip install PyGithub
           pip install bumpversion
           git fetch --tags
@@ -47,4 +47,4 @@ jobs:
           git config --global user.name "Actions"
           git tag -a "$NEW_VERSION" -m "version $NEW_VERSION"
           git push --follow-tags
-          python githubrelease.py ${{github.repository}} $GITHUB_TOKEN $NEW_VERSION cps_linux_amd64_binary cps_linux_amd64
+          python githubrelease.py ${{github.repository}} $GITHUB_TOKEN $NEW_VERSION cps_linux_binary cps_linux
