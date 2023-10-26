@@ -12,7 +12,7 @@ WORKDIR /src
 COPY . /src
 RUN apk add --update-cache git make && \
     mkdir /etc/cps && \
-    make build -d && \
+    make build && \
     mv cps /cps
 
 FROM alpine:latest

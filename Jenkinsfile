@@ -4,6 +4,7 @@ pipeline {
             k8sAgent(
                 dindCPU: '8',
                 dindMEM: '8Gi',
+                arch: 'amd64', // Issues with building amd64 image on arm64 hardware
                 idleMinutes: params.POD_IDLE_MINUTES // Pod will stay idle post build for this amount of minutes
             )
         )
