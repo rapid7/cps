@@ -2,8 +2,8 @@ pipeline {
     agent {
         kubernetes(
             k8sAgent(
-                dindCPU: '4',
-                dindMEM: '4Gi',
+                dindCPU: '8',
+                dindMEM: '8Gi',
                 arch: 'amd64', // Issues with building amd64 image on arm64 hardware
                 idleMinutes: params.POD_IDLE_MINUTES // Pod will stay idle post build for this amount of minutes
             )
@@ -12,6 +12,11 @@ pipeline {
 
     options {
         buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20')
+        datadog(collectLogs: true,
+            tags:
+                ["pipeline:cps",
+                "language:go",
+                "buildtool:docker"])
         ansiColor('xterm')
         timestamps()
         timeout(360) // Mins
