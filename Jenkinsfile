@@ -119,7 +119,7 @@ pipeline {
                     steps {
                         script {
                             def release_envs = [:]
-                            def yamlFile = readYaml (file: "${BUILD_DIR}/ecr_targets.yaml")
+                            def yamlFile = readYaml (file: "/ecr_targets.yaml")
                             yamlFile.get('release_target').each { target ->
                                 def cloud_name = target.getKey()
                                 def account_id = target.getValue().get('account_id')
@@ -161,7 +161,7 @@ pipeline {
                     steps {
                         script {
                             def fedramp_envs = [:]
-                            def yamlFile = readYaml (file: "${BUILD_DIR}/ecr_targets.yaml")
+                            def yamlFile = readYaml (file: "/ecr_targets.yaml")
                             yamlFile.get('fedramp').each { target ->
                                 def cloud_name = target.getKey()
                                 def account_id = target.getValue().get('account_id')
