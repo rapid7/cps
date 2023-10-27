@@ -174,7 +174,7 @@ pipeline {
                                                 targetAccount: account_id,
                                                 targetRegions: regions,
                                                 sourceImageName: env.CONTAINER_SERVICE,
-                                                sourceImageTag: "${env.APP_VERSION}-fips",
+                                                sourceImageTag: env.APP_VERSION,
                                                 autoTagLatest: true,
                                                 stsAssumeWebIdentity: true,
                                                 iamRoleArn: iam_role,
