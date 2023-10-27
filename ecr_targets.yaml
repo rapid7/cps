@@ -1,5 +1,5 @@
 ---
-release_target:
+commercial:
   PLATFORM_DEPLOYMENT:
     account_id: "088750086149"
     iam_role: "arn:aws:iam::088750086149:role/jenkins-platform-deployment-production"

@@ -108,7 +108,7 @@ pipeline {
 
             stages {
 
-                stage('release_target') {
+                stage('commercial') {
                     when {
                         allOf {
                             expression { return params.PUSH_TO_ECR }
@@ -120,7 +120,7 @@ pipeline {
                         script {
                             def release_envs = [:]
                             def yamlFile = readYaml (file: "ecr_targets.yaml")
-                            yamlFile.get('release_target').each { target ->
+                            yamlFile.get('commercial').each { target ->
                                 def cloud_name = target.getKey()
                                 def account_id = target.getValue().get('account_id')
                                 def iam_role = target.getValue().get('iam_role')
@@ -134,7 +134,7 @@ pipeline {
                                                 targetRegions: regions,
                                                 sourceImageName: env.CONTAINER_SERVICE,
                                                 sourceImageTag: env.APP_VERSION,
-                                                autoTagLatest: autotag_latest,
+                                                autoTagLatest: true,
                                                 stsAssumeWebIdentity: true,
                                                 iamRoleArn: iam_role,
                                                 assumeScope: 'local',
@@ -175,7 +175,7 @@ pipeline {
                                                 targetRegions: regions,
                                                 sourceImageName: env.CONTAINER_SERVICE,
                                                 sourceImageTag: "${env.APP_VERSION}-fips",
-                                                autoTagLatest: autotag_latest,
+                                                autoTagLatest: true,
                                                 stsAssumeWebIdentity: true,
                                                 iamRoleArn: iam_role,
                                                 assumeScope: 'local',
