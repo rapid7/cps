@@ -5,7 +5,13 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 BINARY_NAME=cps
-BINARY_LINUX=$(BINARY_NAME)_linux_amd64
+ARCH := $(shell arch)
+ifeq ($(ARCH),aarch64)
+GOARCH=arm64
+else
+GOARCH=amd64
+endif
+BINARY_LINUX=$(BINARY_NAME)_linux
 GIT_COMMIT := $(shell git rev-parse --short HEAD)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 BUILDPATH=$(shell echo `pwd`/.build)/bin
@@ -22,7 +28,7 @@ help:
 all: test build
 
 build: ## Build CPS binary
-	$(GOBUILD) -o $(BINARY_NAME) -v -ldflags "-s -w -X github.com/rapid7/cps/version.GitCommit=$(GIT_COMMIT)"
+	GOARCH=${GOARCH} $(GOBUILD) -o $(BINARY_NAME) -v -ldflags "-s -w -X github.com/rapid7/cps/version.GitCommit=$(GIT_COMMIT)"
 
 test: ## Run unit tests
 	$(GOTEST) -v ./...
@@ -58,5 +64,5 @@ run: ## Run CPS
 	./$(BINARY_NAME)
 
 # Cross compilation
-build-linux: ## Build CPS Binary (linux amd64 target)
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_LINUX) -v 	-ldflags "-s -w -X github.com/rapid7/cps/version.GitCommit=$(GIT_COMMIT)"
+build-linux: ## Build CPS Binary (linux target)
+	CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH} $(GOBUILD) -o $(BINARY_LINUX) -v 	-ldflags "-s -w -X github.com/rapid7/cps/version.GitCommit=$(GIT_COMMIT)"
