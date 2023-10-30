@@ -5,7 +5,6 @@ pipeline {
                 dindCPU: '8',
                 dindMEM: '8Gi',
                 arch: 'amd64', // Issues with building amd64 image on arm64 hardware
-                serviceAccountName: 'jenkins-pd-prod',
                 idleMinutes: params.POD_IDLE_MINUTES // Pod will stay idle post build for this amount of minutes
             )
         )
@@ -25,19 +24,15 @@ pipeline {
 
     parameters {
         string(name: 'POD_IDLE_MINUTES', defaultValue: '0', description: 'Number of minutes pod will stay idle post build')
-        booleanParam(name: 'PUSH_TO_ECR', defaultValue: false, description: 'Push images to ECR repos')
+        booleanParam(name: 'PUSH_TO_ECR', defaultValue: true, description: 'Push images to ECR repos')
     }
 
     environment {
-        ECR_REGISTRY_BUILD        = "${env.BUILD_AWS_ACCOUNT}.dkr.ecr.${env.JENKINS_REGION}.amazonaws.com"
-        ECR_LOGIN_CMD             = "aws ecr get-login-password --region ${env.JENKINS_REGION} | docker login --username AWS --password-stdin"
+        ECR_REGISTRY_BUILD      = "${env.BUILD_AWS_ACCOUNT}.dkr.ecr.${env.JENKINS_REGION}.amazonaws.com"
+        ECR_LOGIN_CMD           = "aws ecr get-login-password --region ${env.JENKINS_REGION} | docker login --username AWS --password-stdin"
         ARTIFACTORY_DOCKER_REPO = 'docker-local.artifacts.corp.rapid7.com'
         BAKE_PUSH               = "${params.PUSH_TO_ECR == false ? "" : "--push"}"
-        BAKE_CMD                = "BUILD_AWS_ACCOUNT=${env.BUILD_AWS_ACCOUNT} \
-                                    JENKINS_REGION=${env.JENKINS_REGION} \
-                                    GIT_URL=${env.GIT_URL} \
-                                    JOB_URL=${env.JOB_URL} \
-                                    docker buildx bake --file docker-bake.hcl ${env.BAKE_PUSH}"
+        BAKE_CMD                = "docker buildx bake --file docker-bake.hcl ${env.BAKE_PUSH}"
     }
 
     stages {
@@ -78,14 +73,7 @@ pipeline {
         stage('Docker buildx bake') {
             steps {
                 sh label: 'Docker buildx bake',
-                script: """
-                    if [ ${env.BAKE_PUSH} != null ]
-                    then
-                        ${env.BAKE_CMD} --push
-                    else
-                        ${env.BAKE_CMD}
-                    fi
-                """
+                script: "${env.BAKE_CMD}"
             }
         }
 
@@ -93,7 +81,7 @@ pipeline {
             when {
                 allOf {
                     expression { return params.PUSH_TO_ECR }
-                    //branch 'master'
+                    branch 'master'
                     not { changeRequest() }
                 }
             }
@@ -113,7 +101,7 @@ pipeline {
                     when {
                         allOf {
                             expression { return params.PUSH_TO_ECR }
-                            //branch 'master'
+                            branch 'master'
                             not { changeRequest() }
                         }
                     }
@@ -155,7 +143,7 @@ pipeline {
                     when {
                         allOf {
                             expression { return params.PUSH_TO_ECR }
-                            //branch 'master'
+                            branch 'master'
                             not { changeRequest() }
                         }
                     }
