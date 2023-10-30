@@ -31,7 +31,7 @@ pipeline {
         ECR_REGISTRY_BUILD      = "${env.BUILD_AWS_ACCOUNT}.dkr.ecr.${env.JENKINS_REGION}.amazonaws.com"
         ECR_LOGIN_CMD           = "aws ecr get-login-password --region ${env.JENKINS_REGION} | docker login --username AWS --password-stdin"
         ARTIFACTORY_DOCKER_REPO = 'docker-local.artifacts.corp.rapid7.com'
-        BAKE_PUSH               = "${params.PUSH_TO_ECR == false ? "" : "--push"}"
+        BAKE_PUSH               = "${params.PUSH_TO_ECR == false || env.BRANCH_NAME != 'master' ? "" : "--push"}"
         BAKE_CMD                = "docker buildx bake --file docker-bake.hcl ${env.BAKE_PUSH}"
     }
 
