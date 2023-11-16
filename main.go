@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -31,22 +32,23 @@ func main() {
 	flag.StringVar(&configFile, "config", "", "(Optional) Config file")
 	flag.StringVar(&configFile, "c", "", "(Optional) Config file")
 	flag.Parse()
-
 	viper.SetConfigName("cps")
 	viper.AddConfigPath("/etc/cps/")
 	viper.AddConfigPath(".")
-	viper.SetEnvPrefix("cps")
-	// Allow dev mode to be set via env var
-	viper.BindEnv("dev") //nolint: errcheck
-
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
+		err := viper.ReadInConfig()
+		if err != nil {
+			panic(fmt.Sprintf("Fatal error reading in config file: %s", err))
+		}
 	}
-
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(fmt.Sprintf("Fatal error reading in config file: %s", err))
-	}
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
+	viper.SetEnvPrefix("cps")
+	viper.AutomaticEnv()
+	fmt.Printf("s3.bucket=%v\n", viper.Get("s3.bucket"))
+	fmt.Printf("consul.enabled=%v\n", viper.GetBool("consul.enabled"))
+	fmt.Printf("api.version=%v\n", viper.GetInt("api.version"))
 
 	logOpts := make([]logger.ConfigOption, 0)
 	logLevel := viper.GetString("log.level")
