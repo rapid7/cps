@@ -37,10 +37,10 @@ func main() {
 	viper.AddConfigPath(".")
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
-		err := viper.ReadInConfig()
-		if err != nil {
-			panic(fmt.Sprintf("Fatal error reading in config file: %s", err))
-		}
+	}
+	err := viper.ReadInConfig()
+	if err != nil {
+		fmt.Sprintf("Cannot read config file: %s. Will use ENV variables if present", err)
 	}
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
