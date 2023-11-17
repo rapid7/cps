@@ -44,8 +44,10 @@ func main() {
 	}
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
-	viper.SetEnvPrefix("cps")
+	viper.SetEnvPrefix("cps_conf")
 	viper.AutomaticEnv()
+	fmt.Printf("account=%v\n", viper.Get("account"))
+	fmt.Printf("region=%v\n", viper.Get("region"))
 	fmt.Printf("s3.bucket=%v\n", viper.Get("s3.bucket"))
 	fmt.Printf("consul.enabled=%v\n", viper.GetBool("consul.enabled"))
 	fmt.Printf("api.version=%v\n", viper.GetInt("api.version"))
@@ -88,7 +90,7 @@ func main() {
 		log.Fatal("Config `s3.bucket` is required!")
 	}
 
-	viper.SetDefault("s3.region", "us-east-1")
+	viper.SetDefault("s3.region", region)
 	bucketRegion := viper.GetString("s3.region")
 
 	viper.SetDefault("consul.host", "localhost:8500")
