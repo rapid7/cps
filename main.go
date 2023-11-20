@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -31,22 +32,25 @@ func main() {
 	flag.StringVar(&configFile, "config", "", "(Optional) Config file")
 	flag.StringVar(&configFile, "c", "", "(Optional) Config file")
 	flag.Parse()
-
 	viper.SetConfigName("cps")
 	viper.AddConfigPath("/etc/cps/")
 	viper.AddConfigPath(".")
-	viper.SetEnvPrefix("cps")
-	// Allow dev mode to be set via env var
-	viper.BindEnv("dev") //nolint: errcheck
-
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 	}
-
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Sprintf("Fatal error reading in config file: %s", err))
+		fmt.Sprintf("Cannot read config file: %s. Will use ENV variables if present", err)
 	}
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
+	viper.SetEnvPrefix("cps_conf")
+	viper.AutomaticEnv()
+	fmt.Printf("account=%v\n", viper.Get("account"))
+	fmt.Printf("region=%v\n", viper.Get("region"))
+	fmt.Printf("s3.bucket=%v\n", viper.Get("s3.bucket"))
+	fmt.Printf("consul.enabled=%v\n", viper.GetBool("consul.enabled"))
+	fmt.Printf("api.version=%v\n", viper.GetInt("api.version"))
 
 	logOpts := make([]logger.ConfigOption, 0)
 	logLevel := viper.GetString("log.level")
@@ -86,7 +90,7 @@ func main() {
 		log.Fatal("Config `s3.bucket` is required!")
 	}
 
-	viper.SetDefault("s3.region", "us-east-1")
+	viper.SetDefault("s3.region", region)
 	bucketRegion := viper.GetString("s3.region")
 
 	viper.SetDefault("consul.host", "localhost:8500")
