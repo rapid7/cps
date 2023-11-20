@@ -20,8 +20,9 @@ FROM alpine:latest
 WORKDIR /
 
 COPY --from=0 /cps .
-ADD dockerfiles/cps.json /
-ADD dockerfiles/services/ /services
+# Local testing
+# ADD dockerfiles/cps.json /
+# ADD dockerfiles/services/ /services
 RUN apk add --update-cache ca-certificates && \
   touch /usr/bin/ec2metadata && mkdir -p /go/src/cps
 COPY . /go/src/cps
