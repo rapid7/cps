@@ -11,6 +11,7 @@ commercial:
       - "us-east-1"
       - "us-east-2"
       - "us-west-2"
+      - "eu-west-1"
 fedramp:
   PLATFORM_DEPLOYMENT:
     account_id: "163526199910"
