@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"strings"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
@@ -61,11 +63,16 @@ func ParseIndex(b, region string) ([]string, error) {
 }
 
 func getIndexFromS3(b, region string) ([]byte, error) {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String(region),
-		},
-	}))
+    accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+    secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+    creds := credentials.NewStaticCredentials(accessKey, secretKey, os.Getenv("AWS_SESSION_TOKEN"))
+	sess, err := session.NewSession(&aws.Config{
+        Credentials: creds,
+        Region:      aws.String(region),
+    })
+    if err != nil {
+        panic(err)
+    }
 
 	var svc s3iface.S3API = s3.New(sess)
 

@@ -10,8 +10,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -97,6 +99,10 @@ func Sync(t time.Time, log *zap.Logger) {
 
 	bucket := Config.bucket
 	region := Config.bucketRegion
+	log.Info("Sync",
+		zap.String("bucket", bucket),
+		zap.String("region", region),
+	)
 
 	svc := setUpAwsSession(region)
 	resp, err := listBucket(bucket, region, svc, log)
@@ -123,11 +129,21 @@ func Sync(t time.Time, log *zap.Logger) {
 }
 
 func setUpAwsSession(region string) S3API {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String(region),
-		},
-	}))
+    accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+    secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+    creds := credentials.NewStaticCredentials(accessKey, secretKey, os.Getenv("AWS_SESSION_TOKEN"))
+	sess, err := session.NewSession(&aws.Config{
+        Credentials: creds,
+        Region:      aws.String(region),
+    })
+    if err != nil {
+        panic(err)
+    }
+	// sess := session.Must(session.NewSessionWithOptions(session.Options{
+	// 	Config: aws.Config{
+	// 		Region: aws.String(region),
+	// 	},
+	// }))
 
 	var svc S3API = s3.New(sess)
 
@@ -200,6 +216,10 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 		pathSplit := strings.Split(f, "/")
 		service := pathSplit[len(pathSplit)-1]
 		serviceName := service[0 : len(service)-5]
+		// log.Info("psimms",
+		// 	zap.String("serviceName", serviceName),
+		// 	zap.String("file", f),
+		// )
 		serviceProperties := make(map[string]interface{})
 		if err := json.Unmarshal(body, &serviceProperties); err != nil {
 			log.Error("error unmarshalling properties",
@@ -217,6 +237,12 @@ func getPropertyFiles(files []string, b string, svc S3API, log *zap.Logger) erro
 		)
 
 		services[serviceName] = serviceProperties
+		// for key, prop := range serviceProperties {
+		// 	log.Info("psimms",
+		// 		zap.Any("key", key),
+		// 		zap.Any("prop", prop),
+		// 	)
+		// }
 	}
 
 	var sm map[string]interface{}

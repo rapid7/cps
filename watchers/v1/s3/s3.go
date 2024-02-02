@@ -8,8 +8,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -99,11 +101,16 @@ func Sync(t time.Time, log *zap.Logger) {
 }
 
 func setUpAwsSession(region string) S3API {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String(region),
-		},
-	}))
+    accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+    secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+    creds := credentials.NewStaticCredentials(accessKey, secretKey, os.Getenv("AWS_SESSION_TOKEN"))
+	sess, err := session.NewSession(&aws.Config{
+        Credentials: creds,
+        Region:      aws.String(region),
+    })
+    if err != nil {
+        panic(err)
+    }
 
 	var svc S3API = s3.New(sess)
 

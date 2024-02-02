@@ -69,9 +69,9 @@ func Populate(sess *session.Session) Instance {
 			PublicIpv4:       "1.2.3.4",
 			ReservationID:    "r-fake",
 			SecurityGroups:   "fake-fake\nfoo-bar-baz",
-			Account:          "000000000000",
+			Account:          "698431835811",
 			Region:           "us-east-1",
-			VpcID:            "vpc-fake",
+			VpcID:            "vpc-0669e850427b1d54e",
 		}
 
 		return metadata
@@ -89,9 +89,9 @@ func Populate(sess *session.Session) Instance {
 		PublicIpv4:       getPublicIpv4(svc),
 		ReservationID:    getReservationID(svc),
 		SecurityGroups:   getSecurityGroups(svc),
-		Account:          getAccount(svc),
-		Region:           getRegion(svc),
-		VpcID:            getVpcID(svc),
+		Account:          "698431835811",
+		Region:           "us-east-1",
+		VpcID:            "vpc-0669e850427b1d54e",
 	}
 
 	return metadata

@@ -1,9 +1,10 @@
 {
-  "account": "000000000000",
+  "account": "698431835811",
   "region": "us-east-1",
-  "file": {
-    "enabled": true,
-    "directory": "/services"
+  "vpc-id": "vpc-0669e850427b1d54e",
+  "s3": {
+    "bucket": "properties.giraffe-staging-1.us-east-1.insight.rapid7.com",
+    "region": "us-east-1"
   },
   "api": {
     "version": 2

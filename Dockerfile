@@ -17,11 +17,15 @@ RUN apk add --update-cache git make && \
 
 FROM alpine:latest
 
+ENV AWS_ACCESS_KEY_ID=
+ENV AWS_SECRET_ACCESS_KEY=
+ENV AWS_SESSION_TOKEN=
+
 WORKDIR /
 
 COPY --from=0 /cps .
 # Local testing
-# ADD dockerfiles/cps.json /
+ADD dockerfiles/cps.json /
 # ADD dockerfiles/services/ /services
 RUN apk add --update-cache ca-certificates && \
   touch /usr/bin/ec2metadata && mkdir -p /go/src/cps

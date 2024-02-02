@@ -28,10 +28,19 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 	scope := strings.Split(vars["scope"], "/")
 	service := scope[0]
 	fullPath := scope[1:]
+	log.Info("GetProperties",
+		zap.Any("vars", vars),
+		zap.Any("scope", scope),
+		zap.Any("service", service),
+		zap.Any("fullPath", fullPath),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 
 	jsoni := kv.GetProperty(service)
+	log.Info("jsoni",
+		zap.Any("jsoni", jsoni),
+	)
 	if jsoni == nil {
 		w.WriteHeader(http.StatusNotFound)
 		if r.Method == http.MethodHead {
@@ -83,10 +92,16 @@ func GetProperties(w http.ResponseWriter, r *http.Request, log *zap.Logger) {
 
 		f := strings.Join(fullPath, ".")
 		p := gjson.GetBytes(j, "properties")
+		log.Info("gjson1",
+			zap.Any("p", p),
+		)
 		selected := gjson.GetBytes([]byte(p.String()), f)
 		w.Write([]byte(strings.TrimSpace(selected.String()))) //nolint: errcheck
 	} else {
 		p := gjson.GetBytes(j, "properties")
+		log.Info("gjson2",
+			zap.Any("p", p),
+		)
 		w.Write([]byte(strings.TrimSpace(p.String()))) //nolint: errcheck
 	}
 }
