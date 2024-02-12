@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -52,7 +52,7 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	}
 	path := "/"
 	if cred.SSM.Service != "" {
-		path += cred.SSM.Service
+		path += cred.SSM.Service+"/"
 	}
 
 	params := &ssm.GetParametersByPathInput{
@@ -85,7 +85,12 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	var found string
 	for _, param := range p.Parameters {
 		parameterName := aws.StringValue(param.Name)
-		if strings.Replace(parameterName, path+"/", "", 1) == name {
+		if cred.SSM.Service != "" {
+			if strings.Replace(parameterName, path, "", 1) == name {
+				found = aws.StringValue(param.Value)
+				break
+			}
+		} else {
 			found = aws.StringValue(param.Value)
 			break
 		}

@@ -17,10 +17,6 @@ RUN apk add --update-cache git make && \
 
 FROM alpine:latest
 
-ENV AWS_ACCESS_KEY_ID=
-ENV AWS_SECRET_ACCESS_KEY=
-ENV AWS_SESSION_TOKEN=
-
 WORKDIR /
 
 COPY --from=0 /cps .
@@ -34,3 +30,7 @@ COPY . /go/src/cps
 EXPOSE 9100/tcp
 
 CMD ["/cps"]
+
+ENV AWS_ACCESS_KEY_ID=
+ENV AWS_SECRET_ACCESS_KEY=
+ENV AWS_SESSION_TOKEN=
