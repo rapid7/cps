@@ -62,7 +62,6 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
 		WithDecryption: aws.Bool(true),
-		MaxResults: 10,
 	}
 	log.Info("debug - params",
 		zap.Any("params", params),
@@ -94,28 +93,26 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	}
 
 	var found string
-	for nt, next_token := range p.Parameters {
-		for _, param := range p.Parameters {
-			log.Info("debug - param",
-				zap.Any("param ARN", aws.StringValue(param.ARN)),
-				zap.Any("param Name", aws.StringValue(param.Name)),
-			)
-			parameterName := aws.StringValue(param.Name)
-			if cred.SSM.Service != "" {
-				if strings.Replace(parameterName, path, "", 1) == name {
-					found = aws.StringValue(param.Value)
-					log.Info("debug - found1",
-						zap.Any("found", found),
-					)
-					break
-				}
-			} else {
+	for _, param := range p.Parameters {
+		log.Info("debug - param",
+			zap.Any("param ARN", aws.StringValue(param.ARN)),
+			zap.Any("param Name", aws.StringValue(param.Name)),
+		)
+		parameterName := aws.StringValue(param.Name)
+		if cred.SSM.Service != "" {
+			if strings.Replace(parameterName, path, "", 1) == name {
 				found = aws.StringValue(param.Value)
-				log.Info("debug - found2",
+				log.Info("debug - found1",
 					zap.Any("found", found),
 				)
 				break
 			}
+		} else {
+			found = aws.StringValue(param.Value)
+			log.Info("debug - found2",
+				zap.Any("found", found),
+			)
+			break
 		}
 	}
 
