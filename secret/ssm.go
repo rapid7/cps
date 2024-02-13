@@ -50,10 +50,14 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	if cred.SSM.Region == "" || cred.SSM.Encrypted == "" {
 		return "", errors.New("not a valid SSM stanza")
 	}
-	path := "/"
+	path := ""
 	if cred.SSM.Service != "" {
-		path += cred.SSM.Service+"/"
+		path += "/"+cred.SSM.Service+"/"
 	}
+	log.Info("debug - path name",
+		zap.Any("path", path),
+		zap.Any("name", name),
+	)
 
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
@@ -84,14 +88,23 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 
 	var found string
 	for _, param := range p.Parameters {
+		log.Info("debug - param",
+			zap.Any("param", param),
+		)
 		parameterName := aws.StringValue(param.Name)
 		if cred.SSM.Service != "" {
 			if strings.Replace(parameterName, path, "", 1) == name {
 				found = aws.StringValue(param.Value)
+				log.Info("debug - found1",
+					zap.Any("found", found),
+				)
 				break
 			}
 		} else {
 			found = aws.StringValue(param.Value)
+			log.Info("debug - found2",
+				zap.Any("found", found),
+			)
 			break
 		}
 	}
