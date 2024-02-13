@@ -50,9 +50,9 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	if cred.SSM.Region == "" || cred.SSM.Encrypted == "" {
 		return "", errors.New("not a valid SSM stanza")
 	}
-	path := ""
+	path := "/"
 	if cred.SSM.Service != "" {
-		path += "/"+cred.SSM.Service+"/"
+		path += cred.SSM.Service+"/"
 	}
 	log.Info("debug - path name",
 		zap.Any("path", path),
@@ -62,7 +62,11 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
 		WithDecryption: aws.Bool(true),
+		MaxResults: 10,
 	}
+	log.Info("debug - params",
+		zap.Any("params", params),
+	)
 
 	if cred.SSM.Label != "" {
 		params.ParameterFilters = []*ssm.ParameterStringFilter{
@@ -75,6 +79,9 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	}
 
 	p, err := svc.GetParametersByPathWithContext(ctx, params)
+	log.Info("debug - p",
+		zap.Any("p", p),
+	)
 	if err != nil {
 		log.Error("Error getting SSM parameters",
 			zap.Error(err),
@@ -87,25 +94,28 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	}
 
 	var found string
-	for _, param := range p.Parameters {
-		log.Info("debug - param",
-			zap.Any("param", param),
-		)
-		parameterName := aws.StringValue(param.Name)
-		if cred.SSM.Service != "" {
-			if strings.Replace(parameterName, path, "", 1) == name {
+	for nt, next_token := range p.Parameters {
+		for _, param := range p.Parameters {
+			log.Info("debug - param",
+				zap.Any("param ARN", aws.StringValue(param.ARN)),
+				zap.Any("param Name", aws.StringValue(param.Name)),
+			)
+			parameterName := aws.StringValue(param.Name)
+			if cred.SSM.Service != "" {
+				if strings.Replace(parameterName, path, "", 1) == name {
+					found = aws.StringValue(param.Value)
+					log.Info("debug - found1",
+						zap.Any("found", found),
+					)
+					break
+				}
+			} else {
 				found = aws.StringValue(param.Value)
-				log.Info("debug - found1",
+				log.Info("debug - found2",
 					zap.Any("found", found),
 				)
 				break
 			}
-		} else {
-			found = aws.StringValue(param.Value)
-			log.Info("debug - found2",
-				zap.Any("found", found),
-			)
-			break
 		}
 	}
 

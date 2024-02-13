@@ -51,6 +51,7 @@ func main() {
 	fmt.Printf("s3.bucket=%v\n", viper.Get("s3.bucket"))
 	fmt.Printf("consul.enabled=%v\n", viper.GetBool("consul.enabled"))
 	fmt.Printf("api.version=%v\n", viper.GetInt("api.version"))
+	fmt.Printf("secret.version=%v\n", viper.GetInt("secret.version"))
 
 	logOpts := make([]logger.ConfigOption, 0)
 	logLevel := viper.GetString("log.level")
@@ -105,6 +106,8 @@ func main() {
 	viper.SetDefault("api.version", 1)
 	apiVersion := viper.GetInt("api.version")
 
+	viper.SetDefault("secret.version", 1)
+
 	viper.SetDefault("port", "9100")
 	port := viper.GetString("port")
 
@@ -128,6 +131,7 @@ func main() {
 		if s3Enabled {
 			viper.SetDefault("secret.version", int(v2s3.V1))
 			secretVersion := viper.GetInt("secret.version")
+			fmt.Printf("secret.version=%v\n", secretVersion)
 			sv := v2s3.SecretHandlerVersion(secretVersion)
 			go v2s3.Poll(bucket, bucketRegion, sv, log)
 		}
