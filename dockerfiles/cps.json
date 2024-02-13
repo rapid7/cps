@@ -8,5 +8,8 @@
   },
   "api": {
     "version": 2
+  },
+  "secret": {
+    "version": 2
   }
 }
