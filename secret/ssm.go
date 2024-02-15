@@ -50,7 +50,7 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	}
 	path := "/"
 	if cred.SSM.Service != "" {
-		path += cred.SSM.Service+"/"
+		path += cred.SSM.Service + "/"
 	}
 
 	var nextToken *string
@@ -59,7 +59,7 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 		params := &ssm.GetParametersByPathInput{
 			Path:           aws.String(path),
 			WithDecryption: aws.Bool(true),
-			NextToken: nextToken,
+			NextToken:      nextToken,
 		}
 
 		if cred.SSM.Label != "" {
@@ -88,7 +88,7 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 			parameterName := aws.StringValue(param.Name)
 			if strings.Replace(parameterName, path, "", 1) == name {
 				found = aws.StringValue(param.Value)
-				break
+				goto Found
 			}
 		}
 		nextToken = p.NextToken
@@ -106,6 +106,7 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 			break
 		}
 	}
+Found:
 	return found, nil
 }
 
