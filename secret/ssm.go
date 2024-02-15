@@ -99,17 +99,9 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 			zap.Any("param Name", aws.StringValue(param.Name)),
 		)
 		parameterName := aws.StringValue(param.Name)
-		if cred.SSM.Service != "" {
-			if strings.Replace(parameterName, path, "", 1) == name {
-				found = aws.StringValue(param.Value)
-				log.Info("debug - found1",
-					zap.Any("found", found),
-				)
-				break
-			}
-		} else {
+		if strings.Replace(parameterName, path, "", 1) == name {
 			found = aws.StringValue(param.Value)
-			log.Info("debug - found2",
+			log.Info("debug - found1",
 				zap.Any("found", found),
 			)
 			break
