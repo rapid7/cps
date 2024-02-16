@@ -50,62 +50,63 @@ func GetSSMSecretWithLabels(ctx context.Context, svc SSMAPI, name string, cred S
 	}
 	path := "/"
 	if cred.SSM.Service != "" {
-		path += cred.SSM.Service+"/"
+		path += cred.SSM.Service + "/"
 	}
 
-	params := &ssm.GetParametersByPathInput{
-		Path:           aws.String(path),
-		WithDecryption: aws.Bool(true),
-	}
-
-	if cred.SSM.Label != "" {
-		params.ParameterFilters = []*ssm.ParameterStringFilter{
-			{
-				Key:    aws.String("Label"),
-				Option: aws.String("Equals"),
-				Values: aws.StringSlice([]string{cred.SSM.Label}),
-			},
-		}
-	}
-
-	p, err := svc.GetParametersByPathWithContext(ctx, params)
-	if err != nil {
-		log.Error("Error getting SSM parameters",
-			zap.Error(err),
-			zap.String("path", path),
-			zap.String("label", cred.SSM.Label),
-			zap.String("key", name),
-		)
-
-		return "", err
-	}
-
+	var nextToken *string
 	var found string
-	for _, param := range p.Parameters {
-		parameterName := aws.StringValue(param.Name)
-		if cred.SSM.Service != "" {
+	for {
+		params := &ssm.GetParametersByPathInput{
+			Path:           aws.String(path),
+			WithDecryption: aws.Bool(true),
+			NextToken:      nextToken,
+		}
+
+		if cred.SSM.Label != "" {
+			params.ParameterFilters = []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Label"),
+					Option: aws.String("Equals"),
+					Values: aws.StringSlice([]string{cred.SSM.Label}),
+				},
+			}
+		}
+
+		p, err := svc.GetParametersByPathWithContext(ctx, params)
+		if err != nil {
+			log.Error("Error getting SSM parameters",
+				zap.Error(err),
+				zap.String("path", path),
+				zap.String("label", cred.SSM.Label),
+				zap.String("key", name),
+			)
+
+			return "", err
+		}
+
+		for _, param := range p.Parameters {
+			parameterName := aws.StringValue(param.Name)
 			if strings.Replace(parameterName, path, "", 1) == name {
 				found = aws.StringValue(param.Value)
-				break
+				goto Found
 			}
-		} else {
-			found = aws.StringValue(param.Value)
+		}
+		nextToken = p.NextToken
+		if nextToken == nil {
+			if found == "" {
+				err := errors.New("no matching parameter found")
+				log.Error("Error getting SSM parameter",
+					zap.Error(err),
+					zap.String("path", path),
+					zap.String("label", cred.SSM.Label),
+					zap.String("key", name),
+				)
+				return "", err
+			}
 			break
 		}
 	}
-
-	if found == "" {
-		err := errors.New("no matching parameter found")
-		log.Error("Error getting SSM parameter",
-			zap.Error(err),
-			zap.String("path", path),
-			zap.String("label", cred.SSM.Label),
-			zap.String("key", name),
-		)
-
-		return "", err
-	}
-
+Found:
 	return found, nil
 }
 

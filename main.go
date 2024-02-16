@@ -128,6 +128,7 @@ func main() {
 		if s3Enabled {
 			viper.SetDefault("secret.version", int(v2s3.V1))
 			secretVersion := viper.GetInt("secret.version")
+			fmt.Printf("secret.version=%v\n", secretVersion)
 			sv := v2s3.SecretHandlerVersion(secretVersion)
 			go v2s3.Poll(bucket, bucketRegion, sv, log)
 		}
