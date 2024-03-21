@@ -93,6 +93,14 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+          steps {
+            script {
+              sonarScanner()
+            }
+          }
+        }
+
         stage('Publish to ecr targets') {
 
             stages {
