@@ -2,9 +2,8 @@ linters:
   disable-all: true
   enable:
     - govet
-    - vet
     - staticcheck
-    - golint
+    - revive
     - errcheck
     - ineffassign
     - misspell
@@ -15,4 +14,3 @@ issues:
 
 run:
   concurrency: 2
-  deadline: 20m

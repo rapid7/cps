@@ -3,20 +3,19 @@ package index
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"go.uber.org/zap"
 
 	"github.com/rapid7/cps/ec2meta"
 )
 
-var (
-	metadata ec2meta.Instance
-)
+var metadata ec2meta.Instance
 
 // Source locations (s3, file, consul, etc).
 type Source struct {
@@ -34,8 +33,8 @@ type Index struct {
 }
 
 // ParseIndex grabs the index from s3 and returns all file paths.
-func ParseIndex(b, region string) ([]string, error) {
-	jsonBytes, err := getIndexFromS3(b, region)
+func ParseIndex(b, region string, log *zap.Logger) ([]string, error) {
+	jsonBytes, err := getIndexFromS3(b, region, log)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +59,7 @@ func ParseIndex(b, region string) ([]string, error) {
 	return paths, nil
 }
 
-func getIndexFromS3(b, region string) ([]byte, error) {
+func getIndexFromS3(b, region string, log *zap.Logger) ([]byte, error) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Region: aws.String(region),
@@ -73,16 +72,15 @@ func getIndexFromS3(b, region string) ([]byte, error) {
 		Bucket: aws.String(b),
 		Key:    aws.String("index.json"),
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
 	defer result.Body.Close()
 
-	metadata = ec2meta.Populate(sess)
+	metadata = ec2meta.Populate(sess, log)
 
-	body, err := ioutil.ReadAll(result.Body)
+	body, err := io.ReadAll(result.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +120,6 @@ func injectPath(path string) string {
 		} else {
 			injectedPath.WriteString(p + "/")
 		}
-
 	}
 
 	return injectedPath.String()

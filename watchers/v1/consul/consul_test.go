@@ -2,6 +2,7 @@ package consul
 
 import (
 	"os"
+	"os/exec"
 	"sync"
 	"testing"
 
@@ -14,11 +15,15 @@ import (
 )
 
 func TestGetServiceHealth(t *testing.T) {
+	if _, err := exec.LookPath("consul"); err != nil {
+		t.Skip("consul not found in PATH")
+	}
+
 	log := logger.BuildLogger()
 
 	os.Stdout, _ = os.Open(os.DevNull)
 
-	srv1, err := testutil.NewTestServer()
+	srv1, err := testutil.NewTestServerConfigT(t, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +39,7 @@ func TestGetServiceHealth(t *testing.T) {
 	assert.Nil(t, err, "Expected no error getting services")
 
 	healthyNodes = make(map[string][]string)
-	var mutex = &sync.Mutex{}
+	mutex := &sync.Mutex{}
 	for key := range services {
 		getServiceHealth(key, client, qo, mutex, log)
 	}
