@@ -135,7 +135,7 @@ func setUpAwsSession(region string) S3API {
 }
 
 func listBucket(bucket, region string, svc S3API, log *zap.Logger) ([]*s3.ListObjectsOutput, error) {
-	i, err := index.ParseIndex(bucket, region)
+	i, err := index.ParseIndex(bucket, region, log)
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +454,6 @@ func injectSecrets(data interface{}) (map[string]interface{}, error) {
 }
 
 func getFile(k, b string, svc S3API, log *zap.Logger) ([]byte, error) {
-
 	var body []byte
 
 	if isJSON.MatchString(k) {
@@ -462,7 +461,6 @@ func getFile(k, b string, svc S3API, log *zap.Logger) ([]byte, error) {
 			Bucket: aws.String(b),
 			Key:    aws.String(k),
 		})
-
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
 				log.Error("Download canceled due to timeout",
